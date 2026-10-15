@@ -1,0 +1,1915 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>60초 생존 대작전: 우리 가족을 지켜라! (방사능 방재 교육 게임)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+  :root { --navy:#1b1f6b; --amber:#ffc400; --alert:#e5322d; --sky:#2f9be0; --leaf:#2e9b4a; }
+  html, body { font-family:'Jua','Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif; }
+  body { background:linear-gradient(180deg,#fff7d6 0%,#ffe9a8 55%,#ffd36b 100%); min-height:100vh; color:#1c1c3a; }
+  .screen { display:none; }
+  .screen.active { display:block; animation:fade .4s ease-out; }
+  @keyframes fade { from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none} }
+  .card { background:#fff; border:3px solid var(--navy); border-radius:22px; box-shadow:0 6px 0 var(--navy); }
+  .btn { border:3px solid var(--navy); border-radius:16px; box-shadow:0 4px 0 var(--navy); transition:transform .08s, box-shadow .08s; }
+  .btn:active:not(:disabled) { transform:translateY(3px); box-shadow:0 1px 0 var(--navy); }
+  .btn:disabled { opacity:.45; cursor:not-allowed; }
+  button:focus-visible { outline:4px solid var(--sky); outline-offset:2px; }
+  .choice { border:3px solid var(--navy); border-radius:16px; background:#fff; text-align:left; transition:transform .1s, background .1s; }
+  .choice:not(:disabled):hover { background:#fff3bf; transform:translateX(4px); }
+  .choice.right { background:#d6f5d6; border-color:var(--leaf); }
+  .choice.wrong { background:#ffd9d6; border-color:var(--alert); }
+  .choice:disabled { cursor:default; }
+  .pop { animation:pop .25s ease-out; }
+  @keyframes pop { from{transform:scale(.85); opacity:0} to{transform:scale(1); opacity:1} }
+  .urgent { animation:pulse .6s infinite; color:var(--alert); }
+  @keyframes pulse { 50%{transform:scale(1.15)} }
+  .blink { animation:blink .5s infinite alternate; }
+  @keyframes blink { from{opacity:1; transform:scale(1)} to{opacity:.55; transform:scale(1.08)} }
+  .siren { display:inline-block; animation:siren 1s infinite; }
+  @keyframes siren { 0%,100%{filter:drop-shadow(0 0 0 #e5322d); transform:rotate(-8deg)} 50%{filter:drop-shadow(0 0 14px #e5322d); transform:rotate(8deg)} }
+  #toast { position:fixed; top:14px; left:50%; transform:translateX(-50%); z-index:70; pointer-events:none; opacity:0; transition:opacity .2s; max-width:92vw; text-align:center; }
+  #toast.show { opacity:1; }
+  .bar { height:10px; border-radius:999px; background:#e5e7f5; overflow:hidden; }
+  .bar > div { height:100%; transition:width .35s; }
+  .dpad button, .bigbtn { border:3px solid var(--navy); border-radius:16px; box-shadow:0 4px 0 var(--navy); touch-action:none; user-select:none; background:#fff; }
+  .dpad button { width:58px; height:58px; font-size:26px; }
+  .dpad button:active, .bigbtn:active { transform:translateY(3px); box-shadow:0 1px 0 var(--navy); background:#fff3bf; }
+  .slot { width:38px; height:38px; border:3px dashed #aab; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; font-size:20px; vertical-align:middle; }
+  .slot.full { border-style:solid; border-color:var(--navy); background:#fff3bf; }
+  .hole { height:74px; border:3px solid var(--navy); border-radius:18px; background:#e8d9b8; font-size:38px; user-select:none; }
+  .mcard { height:84px; border:3px solid var(--navy); border-radius:16px; background:#c9ccf5; font-size:38px; user-select:none; }
+  .mcard.up { background:#fff; }
+  .mcard.done { background:#d6f5d6; }
+  .lamp { height:84px; border:4px solid var(--navy); border-radius:18px; font-size:32px; user-select:none; opacity:.55; transition:opacity .1s, transform .1s; }
+  .lamp.on { opacity:1; transform:scale(1.08); box-shadow:0 0 18px #fff; }
+  .badge { border:3px solid var(--navy); border-radius:16px; padding:8px; background:#fff3bf; }
+  .badge.locked { filter:grayscale(1); opacity:.45; background:#eee; }
+  canvas { image-rendering:auto; }
+  @media (prefers-reduced-motion: reduce) {
+    .urgent, .siren, .pop, .blink, .screen.active { animation:none !important; }
+    .choice:not(:disabled):hover { transform:none; }
+  }
+</style>
+</head>
+<body>
+<div id="toast" class="card px-4 py-2 text-lg"></div>
+
+<div id="overlay" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3" style="background:rgba(20,20,60,.78)">
+  <div id="overlay-box" class="card w-full max-w-xl p-5 max-h-[94vh] overflow-y-auto"></div>
+</div>
+
+<main class="max-w-4xl mx-auto px-3 py-4 sm:py-8">
+
+  <!-- ================= 인트로 ================= -->
+  <section id="screen-intro" class="screen active">
+    <div class="card p-6 sm:p-10 text-center">
+      <div class="text-6xl sm:text-7xl"><span class="siren">🚨</span> 👨‍👩‍👧‍👦</div>
+      <h1 class="text-3xl sm:text-5xl mt-3 leading-tight" style="color:var(--navy)">60초 생존 대작전<br><span style="color:var(--alert)">우리 가족을 지켜라!</span></h1>
+      <p class="mt-5 text-lg sm:text-xl leading-relaxed">
+        고리·새울 원자력발전소에 <b>청색비상, 그리고 적색비상</b>이 발령됐다!<br>
+        아빠 👨 · 엄마 👩 · 첫째 🧒 · 둘째 👧, <b>우리 4인 가족이 2주(14일)</b> 동안 안전하게 버틸 수 있도록 도와주세요.
+      </p>
+      <div class="mt-6 grid sm:grid-cols-3 gap-3 text-left text-base">
+        <div class="rounded-2xl p-3" style="background:#fff3bf">🎒 <b>1단계 · 60초 나르기</b><br>손은 단 <b>4칸!</b> 큰 집 곳곳의 물건을 집어 지하 대피소에 넣고, 다시 가서 또 날라요. 무거운 물건은 칸을 더 차지해요.</div>
+        <div class="rounded-2xl p-3" style="background:#dff0ff">🏠 <b>2단계 · 대피소 14일</b><br>물·식량을 나누고, 쾅쾅 문 두드리는 손님·벌레·누수·라디오 소식 같은 사건을 해결하고, 위험한 탐험도 보낼 수 있어요.</div>
+        <div class="rounded-2xl p-3" style="background:#ffe1de">📖 <b>엔딩</b><br>우리 가족의 이야기가 웹소설처럼 정리되고, 점수·등급(S·A·B·C)과 업적 배지가 나와요.</div>
+      </div>
+      <div class="mt-4 rounded-2xl p-3 text-left" style="background:#e9f7ff;border:3px dashed var(--sky)">
+        💊 <b>꼭 기억해요!</b> 갑상샘 방호 약품은 <b>방송에서 “먹으라”는 지시가 나왔을 때</b>, 그 <b>바로 그때</b> 먹어야 효과가 있어요. 미리 먹어도, 너무 늦게 먹어도 소용없어요!
+      </div>
+      <button id="btn-start" class="btn mt-7 px-10 py-4 text-2xl text-white" style="background:var(--alert)">🎮 게임 시작</button>
+      <p class="mt-4 text-sm text-slate-600">부산광역시 원자력안전과 「찾아가는 방사능 방재 교육」 교재 내용을 바탕으로 만든 학습 게임이에요.</p>
+    </div>
+  </section>
+
+  <!-- ================= 1단계 ================= -->
+  <section id="screen-p1" class="screen">
+    <div class="card p-3 sm:p-4">
+      <div class="flex items-center justify-between gap-3">
+        <div class="text-lg sm:text-xl">🚨 <b>60초 안에 대피소로 물건을 날라요!</b></div>
+        <div id="timer" class="text-4xl sm:text-5xl tabular-nums" style="color:var(--navy)">60</div>
+      </div>
+      <div class="bar mt-2" style="height:14px;border:2px solid var(--navy)"><div id="timer-bar" style="width:100%;background:var(--sky)"></div></div>
+      <div class="mt-3 flex items-center gap-2 flex-wrap">
+        <span class="text-base">✋ 손</span>
+        <span id="hands"></span>
+        <span class="text-sm text-slate-600">(<b id="hand-n">0</b>/4칸)</span>
+        <span class="ml-auto text-sm">🏃 왕복 <b id="trip-n">0</b>번</span>
+      </div>
+    </div>
+
+    <div class="relative mt-3" id="cv-wrap">
+      <canvas id="cv" width="800" height="500" class="w-full rounded-2xl" style="border:4px solid var(--navy); background:#fff; touch-action:none; display:block"></canvas>
+      <div id="joy" aria-label="조이스틱" style="position:absolute;left:10px;bottom:10px;width:min(128px,30vw);aspect-ratio:1;border-radius:50%;background:rgba(27,31,107,.16);border:3px solid rgba(27,31,107,.55);touch-action:none;user-select:none">
+        <div id="joy-knob" style="position:absolute;left:28%;top:28%;width:44%;height:44%;border-radius:50%;background:rgba(255,255,255,.92);border:3px solid #1b1f6b"></div>
+      </div>
+      <button id="btn-grab" aria-label="집기" style="position:absolute;right:10px;bottom:10px;width:min(96px,24vw);aspect-ratio:1;border-radius:50%;background:#ffe27a;border:4px solid #1b1f6b;box-shadow:0 4px 0 #1b1f6b;font-size:clamp(14px,4vw,20px);line-height:1.1;touch-action:none;user-select:none">✋<br>집기</button>
+    </div>
+    <p class="mt-2 text-sm text-slate-700 text-center">👆 가고 싶은 곳이나 <b>물건을 톡!</b> 누르면 자동으로 걸어가서 집어요 · 🕹️ 조이스틱으로 직접 움직여도 돼요 · ⌨️ 방향키/WASD + 스페이스 · 🪜 지하 대피소(가운데 아래 창고)에 들어가면 손에 든 물건이 <b>자동으로 들어가요</b>!</p>
+
+    <div class="card mt-3 p-3 sm:p-4">
+      <div class="text-base mb-1">✋ <b>손에 든 물건</b> <span class="text-sm text-slate-500">(누르면 그 자리에 내려놓아요)</span></div>
+      <div id="hand-list" class="flex flex-wrap gap-2 min-h-[44px]"></div>
+      <div class="text-base mt-3 mb-1">🏠 <b>대피소에 모은 물건</b></div>
+      <div id="dep-list" class="flex flex-wrap gap-2 min-h-[34px]"></div>
+    </div>
+    <div class="text-center mt-4">
+      <button id="btn-hatch" class="btn px-8 py-3 text-xl text-white" style="background:var(--sky)">✅ 준비 끝! 대피소 생활 시작</button>
+      <p class="text-xs text-slate-500 mt-1">손에 든 물건은 대피소에 넣은 뒤에 눌러요!</p>
+    </div>
+  </section>
+
+  <section id="screen-p1-sum" class="screen">
+    <div class="card p-5 sm:p-8">
+      <h2 id="sum-title" class="text-2xl sm:text-3xl text-center" style="color:var(--navy)">🪜 대피소 점검!</h2>
+      <div id="sum-body" class="mt-4 space-y-2"></div>
+      <div class="text-center mt-6">
+        <button id="btn-p2" class="btn px-8 py-3 text-xl text-white" style="background:var(--alert)">🏠 대피소 생활 시작!</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 2단계 ================= -->
+  <section id="screen-p2" class="screen">
+    <div id="p2-head" class="card p-3 sm:p-4"></div>
+    <div id="p2-fam" class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2"></div>
+    <div id="p2-stage" class="card mt-3 p-4 sm:p-6"></div>
+  </section>
+
+  <section id="screen-end" class="screen">
+    <div id="end-box" class="card p-5 sm:p-8"></div>
+  </section>
+</main>
+
+<script>
+(() => {
+'use strict';
+
+/* =====================================================================
+ *  공통 유틸
+ * ===================================================================== */
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const rand = n => Math.floor(Math.random() * n);
+const shuffle = arr => { const a = arr.slice(); for (let i=a.length-1;i>0;i--){ const j=rand(i+1); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+let toastTimer = null;
+function toast(msg, ms=1500) {
+  const t = $('toast'); t.innerHTML = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ms);
+}
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(el => el.classList.toggle('active', el.id === id));
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+/* =====================================================================
+ *  데이터
+ * ===================================================================== */
+const SLOTS = 4;
+const P1_TIME = 60;
+const DAYS = 14;              // 2주
+const DROP_DAYS = [4, 8, 12]; // 구호물자 도착일
+
+const FAMILY = [
+  { id:'dad',    name:'아빠', emoji:'👨' },
+  { id:'mom',    name:'엄마', emoji:'👩' },
+  { id:'first',  name:'첫째', emoji:'🧒' },
+  { id:'second', name:'둘째', emoji:'👧' },
+];
+
+/* kind: water / staple / fresh / snack / gear / fun / trap */
+const ITEMS = {
+  water:    { emoji:'🥤', name:'생수',          short:'생수',     slots:1, good:true,  kind:'water',  why:'마실 물이에요. (물 +3)' },
+  bigwater: { emoji:'🛢️', name:'큰 생수통',     short:'큰생수통', slots:3, good:true,  kind:'water',  why:'손 3칸을 차지하지만 물이 많아요! (물 +9)' },
+  can:      { emoji:'🥫', name:'통조림',        short:'통조림',   slots:1, good:true,  kind:'staple', why:'오래 보관되고 그대로 먹을 수 있어요. (식량 +3)' },
+  canbox:   { emoji:'📦', name:'통조림 박스',   short:'통조림박스', slots:2, good:true, kind:'staple', why:'손 2칸을 차지하지만 식량이 많아요! (식량 +8)' },
+  ramen:    { emoji:'🍜', name:'라면',          short:'라면',     slots:1, good:true,  kind:'staple', why:'오래 보관할 수 있는 식량이에요. (식량 +2)' },
+  rice:     { emoji:'🍚', name:'즉석밥',        short:'즉석밥',   slots:1, good:true,  kind:'staple', why:'오래 보관할 수 있는 식량이에요. (식량 +2)' },
+  ricebag:  { emoji:'🌾', name:'쌀 포대',       short:'쌀포대',   slots:2, good:true,  kind:'staple', why:'손 2칸을 차지하지만 식량이 많아요! (식량 +6)' },
+  bread:    { emoji:'🍞', name:'생크림빵',      short:'생크림빵', slots:1, good:false, kind:'fresh',  why:'금방 상해요. (내일이면 못 먹어요)', tip:'생크림빵은 냉장이 안 되면 금방 상해요. <b>통조림이나 라면</b>이 더 좋아요!' },
+  cake:     { emoji:'🍰', name:'생크림케이크',  short:'케이크',   slots:1, good:false, kind:'fresh',  why:'금방 상해요. (내일이면 못 먹어요)', tip:'케이크는 금방 상해요! <b>통조림이나 라면</b>처럼 오래가는 음식을 챙겨요.' },
+  milk:     { emoji:'🥛', name:'우유',          short:'우유',     slots:1, good:false, kind:'fresh',  why:'냉장고가 꺼지면 금방 상해요.', tip:'우유는 냉장고가 꺼지면 금방 상해요. 오래가는 <b>생수·통조림</b>이 좋아요!' },
+  cookie:   { emoji:'🍪', name:'과자',          short:'과자',     slots:1, good:false, kind:'snack',  why:'간식이라 배가 금방 고파져요. (효과 작음)', tip:'과자는 배가 금방 고파져요. 든든한 <b>통조림·라면</b>이 먼저예요!' },
+  choco:    { emoji:'🍫', name:'초콜릿',        short:'초콜릿',   slots:1, good:false, kind:'snack',  why:'간식이라 배가 금방 고파져요. (효과 작음)', tip:'초콜릿은 간식일 뿐, 든든한 식사가 되진 않아요. <b>통조림·라면</b>이 먼저예요!' },
+
+  radio:    { emoji:'📻', name:'라디오·건전지·랜턴', short:'라디오세트', slots:1, good:true, kind:'gear', why:'단전돼도 재난방송을 듣고, 어둠을 밝힐 수 있어요.' },
+  pill:     { emoji:'💊', name:'갑상샘 방호 약품',   short:'갑상샘약',   slots:1, good:true, kind:'gear', why:'방사성 요오드가 갑상샘에 쌓이는 것을 막아요. 방송 지시가 있을 때 제때 먹어야 해요!' },
+  mask:     { emoji:'😷', name:'KF94 마스크·우의',   short:'마스크세트', slots:1, good:true, kind:'gear', why:'외부 공기 속 오염 물질을 마시거나 몸에 묻는 것을 줄여 줘요.' },
+  gasmask:  { emoji:'🥽', name:'방독면',             short:'방독면',     slots:1, good:true, kind:'gear', why:'위험한 야외 탐험에서 오염으로부터 가장 잘 지켜 줘요!' },
+  soap:     { emoji:'🧼', name:'비누·샴푸',          short:'비누·샴푸',  slots:1, good:true, kind:'gear', why:'몸에 묻은 방사성 물질을 씻어 낼 때 써요. (3번 사용)' },
+  firstaid: { emoji:'🩹', name:'구급상자',           short:'구급상자',   slots:1, good:true, kind:'gear', why:'다친 가족을 치료할 수 있어요. (3번 사용)' },
+  insect:   { emoji:'🧴', name:'살충제',             short:'살충제',     slots:1, good:true, kind:'gear', why:'대피소에 나타난 벌레를 퇴치해요. (2번 사용)' },
+  extinguisher:{ emoji:'🧯', name:'소화기',          short:'소화기',     slots:2, good:true, kind:'gear', why:'손 2칸! 벌레 퇴치나 위험한 손님을 쫓을 때 쓸 수 있어요. (2번 사용)' },
+  guide:    { emoji:'📘', name:'생존 안내서',        short:'생존안내서', slots:1, good:true, kind:'gear', why:'벌레 퇴치법 같은 생존 요령이 적혀 있어요.' },
+  map:      { emoji:'🗺️', name:'지도',              short:'지도',       slots:1, good:true, kind:'gear', why:'배관 위치를 찾고, 탐험에서 물자를 더 많이 찾을 수 있어요.' },
+  toolbox:  { emoji:'🧰', name:'공구함',             short:'공구함',     slots:2, good:true, kind:'gear', why:'손 2칸! 누수 같은 고장을 수리할 수 있어요.' },
+
+  game:     { emoji:'🎮', name:'게임기',   short:'게임기', slots:1, good:false, kind:'fun', why:'에너지를 채울 수 있지만 배터리가 2번뿐이에요.', tip:'게임기는 에너지를 채울 수 있지만 <b>필수품은 아니에요</b>. (배터리 2번)' },
+  cards:    { emoji:'🃏', name:'카드',     short:'카드',   slots:1, good:false, kind:'fun', why:'전기 없이도 에너지를 채울 수 있어요! (하루 1번)', tip:'카드놀이는 전기 없이도 에너지를 채울 수 있어요! 가볍고 좋은 선택이에요.' },
+  chess:    { emoji:'♟️', name:'체스판',   short:'체스판', slots:1, good:false, kind:'fun', why:'가족과 두면 에너지가 충전돼요. (하루 1번)', tip:'체스판도 전기 없이 가족과 놀 수 있어요!' },
+  bear:     { emoji:'🧸', name:'곰인형',   short:'곰인형', slots:1, good:false, kind:'fun', why:'무서워하는 아이를 달랠 때 도움이 돼요.', tip:'곰인형은 아이 마음을 달래 주지만 <b>필수품은 아니에요</b>.' },
+
+  gold:     { emoji:'💎', name:'무거운 귀금속', short:'귀금속',   slots:2, good:false, kind:'trap', why:'2칸이나 차지하지만 생존에는 도움이 안 돼요.', tip:'귀금속은 <b>생존에 도움이 안 돼요</b>. 손 2칸이나 쓰는데 말이에요!' },
+  tv:       { emoji:'📺', name:'큰 TV',        short:'TV',       slots:2, good:false, kind:'trap', why:'무겁고, 전기가 끊기면 쓸 수 없어요.', tip:'TV는 무겁고 <b>전기가 끊기면 못 써요</b>. 라디오가 훨씬 좋아요!' },
+  computer: { emoji:'🖥️', name:'컴퓨터',       short:'컴퓨터',   slots:2, good:false, kind:'trap', why:'전기가 없으면 쓸 수 없고 무거워요.', tip:'컴퓨터는 <b>전기가 끊기면 쓸모없고</b> 무거워요!' },
+  vase:     { emoji:'🏺', name:'비싼 도자기',  short:'도자기',   slots:2, good:false, kind:'trap', why:'깨지기 쉽고 생존에는 도움이 안 돼요.', tip:'도자기는 비싸지만 <b>생존에는 도움이 안 돼요</b>.' },
+  piano:    { emoji:'🎹', name:'전자피아노',   short:'피아노',   slots:3, good:false, kind:'trap', why:'손 3칸이나 차지하고 전기가 없으면 소리도 안 나요.', tip:'전자피아노는 <b>3칸이나 차지</b>하고 전기가 없으면 소리도 안 나요!' },
+};
+
+// 방 격자: col1 x=70,160,250,340 / col2 450,540,630,720 / col3 830,920,1010,1100, 행 y = 80,185 / 305,410
+const SPAWNS = [
+  // 거실
+  { key:'radio', x:70, y:80 }, { key:'tv', x:160, y:80 }, { key:'game', x:250, y:80 }, { key:'cards', x:340, y:80 },
+  { key:'bear', x:70, y:185 }, { key:'cookie', x:160, y:185 }, { key:'mask', x:250, y:185 }, { key:'choco', x:340, y:185 },
+  // 주방
+  { key:'water', x:450, y:80 }, { key:'water', x:540, y:80 }, { key:'can', x:630, y:80 }, { key:'can', x:720, y:80 },
+  { key:'ramen', x:450, y:185 }, { key:'ramen', x:540, y:185 }, { key:'bread', x:630, y:185 }, { key:'milk', x:720, y:185 },
+  // 베란다
+  { key:'gasmask', x:830, y:80 }, { key:'bigwater', x:920, y:80 }, { key:'extinguisher', x:1010, y:80 }, { key:'insect', x:1100, y:80 },
+  { key:'ricebag', x:830, y:185 }, { key:'guide', x:920, y:185 }, { key:'map', x:1010, y:185 }, { key:'vase', x:1100, y:185 },
+  // 안방
+  { key:'pill', x:70, y:305 }, { key:'gold', x:160, y:305 }, { key:'soap', x:250, y:305 }, { key:'cake', x:340, y:305 },
+  { key:'bread', x:70, y:410 }, { key:'firstaid', x:160, y:410 }, { key:'chess', x:250, y:410 }, { key:'computer', x:340, y:410 },
+  // 창고
+  { key:'water', x:450, y:305 }, { key:'water', x:540, y:305 }, { key:'can', x:630, y:305 }, { key:'can', x:720, y:305 },
+  { key:'rice', x:450, y:410 }, { key:'ramen', x:720, y:410 },
+  // 서재
+  { key:'toolbox', x:830, y:305 }, { key:'piano', x:920, y:305 }, { key:'soap', x:1010, y:305 }, { key:'canbox', x:1100, y:305 },
+  { key:'water', x:830, y:410 }, { key:'can', x:920, y:410 }, { key:'ramen', x:1010, y:410 }, { key:'choco', x:1100, y:410 },
+];
+const WORLD_W = 1180, VIEW_W = 800, VIEW_H = 500;
+const ROOMS_DRAW = [
+  { name:'🛋️ 거실',  x:26,  y:26,  w:368, h:218, c:'#fff1c9' },
+  { name:'🍳 주방',  x:406, y:26,  w:368, h:218, c:'#dff1ff' },
+  { name:'🌿 베란다', x:786, y:26,  w:368, h:218, c:'#e2f5df' },
+  { name:'🛏️ 안방',  x:26,  y:256, w:368, h:218, c:'#ffe3ec' },
+  { name:'📦 창고',  x:406, y:256, w:368, h:218, c:'#e9e6dc' },
+  { name:'📚 서재',  x:786, y:256, w:368, h:218, c:'#efe3ff' },
+];
+const WALLS = [
+  [14,14,1152,12],[14,474,1152,12],[14,14,12,472],[1154,14,12,472],
+  [394,26,12,84],[394,170,12,160],[394,390,12,84],
+  [774,26,12,84],[774,170,12,160],[774,390,12,84],
+  [26,244,134,12],[240,244,300,12],[620,244,300,12],[1000,244,154,12],
+];
+const HATCH = { x:548, y:394, w:84, h:76 };
+
+/* ---------- 상태 표시(게이지 단계) ---------- */
+const hydState = v => v >= 55 ? { t:'💧 괜찮아요', c:'#2f9be0', k:0 } : v >= 25 ? { t:'😮‍💨 목마름', c:'#f59e0b', k:1 } : { t:'🥵 갈증!', c:'#e5322d', k:2 };
+const satState = v => v >= 55 ? { t:'😋 배부름', c:'#2e9b4a', k:0 } : v >= 25 ? { t:'😕 배고픔', c:'#f59e0b', k:1 } : { t:'😵 굶주림!', c:'#e5322d', k:2 };
+
+/* ---------- 방재 퀴즈 (14개) ---------- */
+const QSEQ = ['window','pill','clothes','info','power','term','outing','school','natural','pillscope','level','three','evacuate','shelter'];
+const QUIZZES = {
+  window: {
+    place:'🚨 첫째 날', emoji:'🚨', title:'방사선 비상 방송이 울렸다!',
+    text:'“방사선 비상! 방사선 비상!” 대피소에 비상 방송이 울려 퍼진다. 우리 가족은 어떻게 해야 할까?',
+    ref:'교재 16~17쪽 · 신속한 실내 대피 / 실내 대피 후 조치',
+    choices:[
+      { t:'🏃 놀라서 집 밖으로 뛰어 나간다', ok:false, why:'밖으로 나가면 방사성 물질에 그대로 노출돼요!' },
+      { t:'🏠 실내로 대피하고, 창문과 환풍기를 닫아 외부 공기를 차단한다', ok:true, why:'실내로 신속히 대피하고, 창문을 닫고 환풍기를 막아 외부 공기가 들어오지 못하게 해요.' },
+      { t:'👃 창문을 열어 바깥 공기가 괜찮은지 맡아 본다', ok:false, why:'방사선은 냄새나 눈으로 확인할 수 없고, 창문을 열면 오염된 공기가 들어와요.' },
+    ],
+    after(ok) {
+      if (ok) { S.sealed = true; allEne(5); addLog('방송을 듣자마자 당신은 창문과 환풍기를 꼭 닫아 외부 공기를 차단했습니다.'); return '창문·환풍기를 닫아 외부 공기를 막았어요! (가족 에너지 +5)'; }
+      S.sealed = false;
+      const v = shuffle(S.fam).slice(0, 2); v.forEach(m => m.contam = true); allEne(-8);
+      addLog(`방송을 가볍게 여긴 사이 외부 공기가 들어왔고, ${v.map(m => m.name).join('와(과) ')}의 몸에 오염물이 묻고 말았습니다.`);
+      return `외부 공기가 들어와 ${v.map(m => m.emoji + m.name).join(', ')}이(가) 오염됐어요! 🧼 비누·샴푸로 씻어 줘야 해요. (가족 에너지 −8)`;
+    },
+  },
+  pill: {
+    place:'📻 둘째 날', emoji:'💊', title:'갑상샘 방호 약품, 언제 먹을까?',
+    text:'방송에서 “적색비상 발령, 방사성 물질이 퍼질 수 있습니다”라고 한다. 이 약은 언제 먹어야 할까?',
+    ref:'교재 18쪽 · 갑상샘 방호 약품은 뭔가요?',
+    choices:[
+      { t:'🤔 생각날 때 아무 때나 먹는다', ok:false, why:'이 약은 시점이 중요해요. 마음대로 먹으면 정작 필요할 때 효과가 없어요.' },
+      { t:'📢 방사선 피폭 직전 또는 직후, 정부·지자체(부산시·교육청)의 지시에 따라 먹는다', ok:true, why:'피폭 직전·직후에 지시에 따라 먹어야 효과가 커요. 6시간 전·2시간 이내엔 90% 이상, 6시간 후엔 50% 정도로 줄어요.' },
+      { t:'😨 무서우니까 지금 미리 온 가족이 먹어 둔다', ok:false, why:'미리 먹으면 효과가 사라져요. 그리고 이 약은 모든 방사성 물질을 막아 주지도 않아요.' },
+    ],
+    after(ok) {
+      if (ok) { allEne(3); addLog('“약은 방송에서 먹으라고 할 때만!” 당신은 가족에게 약 먹는 시점을 단단히 약속시켰습니다.'); return '💡 방송 지시가 나올 때까지 약을 참았다가, 그 순간 바로 먹이면 돼요. (가족 에너지 +3)'; }
+      allEne(-5); addLog('당신은 약을 언제 먹어야 하는지 헷갈려 한동안 불안해했습니다.');
+      return '💡 약은 “방송 지시가 나왔을 때” 먹어야 효과가 있어요. 지시 전에 먹으면 낭비예요! (가족 에너지 −5)';
+    },
+  },
+  clothes: {
+    place:'🌫️ 셋째 날', emoji:'🧥', title:'야외에서 들어온 직후엔?',
+    text:'아빠가 구호물자를 확인하러 잠깐 밖에 나갔다 돌아왔다. 옷과 몸에 방사성 물질이 묻었을 수 있다. 오염을 제거하는 올바른 방법은?',
+    ref:'교재 16쪽 · 외부에 노출된 옷을 탈의하세요 / 샤워하세요',
+    setup() { const d = S.fam[0]; if (!d.contam) d.contam = true; },
+    choices:[
+      { t:'👕 입었던 옷을 조심스럽게 벗고, 비누와 샴푸로 샤워한 뒤 새 옷으로 갈아입는다', ok:true, why:'오염물이 날리지 않게 옷을 조심스럽게 벗고, 비누·샴푸만 사용해 샤워해요. 상처 부위에 물이 들어가지 않게 조심해요.' },
+      { t:'🛏️ 그냥 침대에 눕는다', ok:false, why:'오염된 옷을 입은 채 있으면 계속 방사선에 노출되고, 집 안도 오염돼요.' },
+      { t:'💨 거실에서 옷을 탁탁 털고 그대로 입는다', ok:false, why:'털면 오염물이 날려 가족 모두가 노출될 수 있어요.' },
+    ],
+    after(ok) {
+      const dad = S.fam[0];
+      if (ok) {
+        if (S.uses.soap > 0) { S.uses.soap--; dad.contam = false; addLog('밖에서 돌아온 아빠는 옷을 조심스럽게 벗고, 챙겨 온 비누와 샴푸로 깨끗이 씻었습니다.'); return '🧼 비누·샴푸로 깨끗이 씻었어요. <b>치료 완료!</b> (비누 사용 횟수 −1)'; }
+        addLog('아빠는 올바른 순서로 옷을 벗었지만, 비누와 샴푸가 없어 물로만 헹궈야 했습니다.');
+        return '순서는 맞았지만 🧼 비누·샴푸가 없어 완전히 씻어 내지 못했어요. (오염 상태 유지 — 구호소에서 검사받아요!)';
+      }
+      S.fam[1].contam = true; allEne(-8);
+      addLog('아빠가 오염된 옷을 그대로 둔 탓에 엄마에게까지 오염물이 옮겨 갔습니다.');
+      return '오염이 엄마에게도 옮겨 갔어요! 👩 엄마도 오염 상태가 됐어요. (가족 에너지 −8)';
+    },
+  },
+  info: {
+    place:'📡 정보 확인', emoji:'🔎', title:'방사선량, 어디서 확인할까?',
+    text:'“지금 우리 동네 방사선량은 괜찮을까?” 이웃들 사이에 여러 이야기가 오간다. 믿을 수 있는 정보는 어디서 확인해야 할까?',
+    ref:'교재 10쪽 · 환경방사선량 모니터링 / 29쪽',
+    choices:[
+      { t:'💬 이웃 단톡방에 도는 소문을 믿는다', ok:false, why:'출처가 불분명한 소문은 위험해요.' },
+      { t:'🌐 재난방송과 부산시 홈페이지(www.busan.go.kr)의 ‘실시간 환경방사선 현황’을 확인한다', ok:true, why:'부산시는 환경방사선량을 실시간으로 감시하고 홈페이지에 공개해요.' },
+      { t:'🌈 하늘 색깔이 이상한지 눈으로 살펴본다', ok:false, why:'방사선은 사람의 감각으로 존재를 확인할 수 없어요.' },
+    ],
+    after(ok) {
+      if (ok) { allEne(5); addLog('불안한 소문 대신, 당신은 재난방송과 부산시가 공개한 실시간 방사선량을 확인했습니다. 숫자를 보니 마음이 놓였습니다.'); return '공식 정보를 확인하니 마음이 놓여요. (가족 에너지 +5)'; }
+      allEne(-8); addLog('확인되지 않은 이야기에 휘둘린 하루였습니다. 가족의 불안은 더 커졌습니다.');
+      return '잘못된 정보 때문에 가족이 더 불안해졌어요. (가족 에너지 −8)';
+    },
+  },
+  power: {
+    place:'⚡ 정전', emoji:'🔦', title:'전기가 끊겼어요!',
+    text:'대피소 전기가 갑자기 나갔다. TV도 꺼졌는데 재난방송은 계속 듣고 싶다. 어떻게 해야 할까?',
+    ref:'교재 16쪽 · 단전을 대비하세요',
+    choices:[
+      { t:'📻 휴대용 라디오와 건전지·랜턴으로 재난방송을 듣는다', ok:true, why:'전기가 끊길 상황에 대비해 휴대용 라디오와 배터리, 랜턴을 준비해요.' },
+      { t:'📱 스마트폰으로 영상을 보며 시간을 보낸다', ok:false, why:'배터리가 금방 닳아 정작 필요한 소식을 못 들을 수 있어요.' },
+      { t:'🪟 창문을 열고 밖에 나가 상황을 본다', ok:false, why:'창문을 열면 외부 공기가 들어와요. 라디오로 재난방송을 들어요.' },
+    ],
+    after(ok) {
+      if (ok) {
+        if (S.has.radio) { allEne(5); addLog('전기가 끊긴 밤, 가족은 랜턴을 켜고 라디오에서 흘러나오는 재난방송에 귀를 기울였습니다.'); return '📻 챙겨 온 라디오 덕분에 방송을 들을 수 있어요! (가족 에너지 +5)'; }
+        allEne(-3); addLog('정답은 알고 있었지만 라디오를 챙기지 못해 가족은 캄캄한 어둠 속에서 소식을 기다려야 했습니다.');
+        return '정답이지만… 📻 라디오를 챙기지 못해서 실제로는 못 들었어요. 다음엔 꼭 챙겨요! (가족 에너지 −3)';
+      }
+      allEne(-5); return '배터리와 안전을 모두 잃을 뻔했어요. (가족 에너지 −5)';
+    },
+  },
+  term: {
+    place:'🧪 방재 공부', emoji:'🔥', title:'방사선? 방사능? 방사성 물질?',
+    text:'모닥불에 비유해 볼게요. 불을 피우면 <b>장작이 타고, 불이 있고, 열이 나요</b>. 이 중에서 “열”에 해당하는 것은 무엇일까요?',
+    ref:'교재 29쪽 · 방사선? 방사능? 방사성 물질?',
+    choices:[
+      { t:'🔥 방사능 (불)', ok:false, why:'방사능은 방사성 물질이 방사선을 내는 능력·강도로, 모닥불의 “불”에 해당해요.' },
+      { t:'♨️ 방사선 (열)', ok:true, why:'방사선은 파동 또는 입자의 형태를 가진 에너지 흐름으로, “열”에 해당해요. 방사선은 사람의 감각으로 확인할 수 없어요.' },
+      { t:'🪵 방사성 물질 (장작)', ok:false, why:'방사성 물질은 우라늄·방사성 요오드·라듐처럼 방사선을 내는 능력을 가진 물질로, “장작”에 해당해요.' },
+    ],
+    after(ok) {
+      if (ok) { allEne(3); addLog('방재 포스터를 읽으며 가족은 “열=방사선, 불=방사능, 장작=방사성 물질”이라는 말을 함께 외웠습니다.'); return '용어를 정확히 알면 불안도 줄어요! (가족 에너지 +3)'; }
+      allEne(-3); return '헷갈리는 용어는 다시 정리해 봐요. (가족 에너지 −3)';
+    },
+  },
+  outing: {
+    place:'🕰️ 지루한 대피 생활', emoji:'🛝', title:'아이들이 밖에 나가자고 해요',
+    text:'대피 생활이 길어지자 첫째와 둘째가 “밖이 조용한데 잠깐만 놀이터에 나가요!”라며 졸라 댄다. 어떻게 해야 할까?',
+    ref:'교재 16쪽 · 야외 활동은 삼가세요 / 재난방송을 시청하세요',
+    choices:[
+      { t:'🛝 조용해 보이니 잠깐만 놀이터에서 놀게 한다', ok:false, why:'방사선은 눈에 보이지 않아요. 조용해 보여도 안전하다는 뜻이 아니에요.' },
+      { t:'📢 재난방송·지자체 안내로 안전이 확인될 때까지 야외 활동을 삼간다', ok:true, why:'방사능으로부터 안전해지기 전까지는 야외 활동을 삼가고, 재난방송을 계속 들어요.' },
+      { t:'😷 마스크만 쓰면 괜찮으니 잠깐 산책시킨다', ok:false, why:'마스크만으로는 충분하지 않아요. 안내가 있을 때까지 실내에 머물러요.' },
+    ],
+    after(ok) {
+      if (ok) { addLog('아이들이 졸랐지만 당신은 “재난방송에서 안전하다고 할 때까지만 참자”며 아이들을 달랬습니다.'); return '아이들이 아쉬워했지만 가족 모두 안전하게 실내에 머물렀어요.'; }
+      S.fam[2].contam = true; S.fam[3].contam = true; allEne(-8);
+      addLog('잠깐이라 괜찮겠지 싶어 아이들을 내보냈다가, 첫째와 둘째의 몸에 오염물이 묻었습니다.');
+      return '🧒 첫째와 👧 둘째가 오염됐어요! 🧼 비누·샴푸로 씻겨야 해요. (가족 에너지 −8)';
+    },
+  },
+  school: {
+    place:'🏫 학교 대피 훈련', emoji:'🏫', title:'학교에서 비상방송이 울렸다!',
+    text:'(만약 학교에 있을 때의 훈련 상황) 수업 시간에 방사선비상 방송이 나왔다! 어떻게 해야 할까?',
+    ref:'교재 17쪽 · 방사선비상 시 학교에서 행동요령',
+    choices:[
+      { t:'🏃 즉시 집으로 신나게 뛰어간다', ok:false, why:'밖으로 나가면 위험해요! 이동을 서두르지 말고 건물 안에 머물러요.' },
+      { t:'🏫 교실로 대피해 문과 창문을 닫고, 에어컨·환풍기를 끄고 방송을 듣는다', ok:true, why:'즉시 교실로 대피하고 문과 창문을 닫아 외부 공기를 차단해요. 선생님 지시와 재난방송을 잘 들어요.' },
+      { t:'⚽ 운동장 한가운데에 모여서 기다린다', ok:false, why:'운동장은 건물 밖이에요. 야외 활동을 삼가고 교실로 대피해야 해요.' },
+    ],
+    after(ok) {
+      if (ok) { allEne(3); addLog('방재 훈련 시간, 아이들은 “교실로 대피, 창문 닫기!”를 씩씩하게 외쳤습니다.'); return '훈련 성공! 아이들이 자신 있게 외쳤어요. (가족 에너지 +3)'; }
+      allEne(-3); return '학교에서도 밖으로 나가면 안 돼요. 다시 기억해요! (가족 에너지 −3)';
+    },
+  },
+  natural: {
+    place:'🍌 간식 시간', emoji:'🍌', title:'바나나에도 방사선이?',
+    text:'둘째가 말했다. “바나나에도 방사선이 있대요! 먹으면 위험한 거 아니에요?” 어떻게 설명해 줄까?',
+    ref:'교재 11쪽 · 우리 생활 주변 방사선과 방사선량',
+    choices:[
+      { t:'😱 위험해! 절대 먹으면 안 돼', ok:false, why:'자연에는 원래 방사선(자연방사선)이 있어요. 아주 적은 양이라 걱정하지 않아도 돼요.' },
+      { t:'🌱 자연에도 방사선이 있지만 아주 적은 양이라 일상생활에 지장이 없어', ok:true, why:'우리 몸은 자연방사선에 노출되어 있지만 적은 양이기 때문에 일상생활에 지장이 없어요.' },
+      { t:'☠️ 먹으면 바로 방사능병에 걸려', ok:false, why:'바나나 1개는 약 0.001 mSv로 아주 적은 양이에요.' },
+    ],
+    after(ok) {
+      if (ok) { allEne(4); addLog('둘째가 바나나를 맛있게 먹으며 “자연방사선은 아주 조금이래요!”라고 자랑했습니다.'); return '정확한 지식이 불안을 줄여 줘요. (가족 에너지 +4)'; }
+      allEne(-3); return '지나친 걱정은 마음만 힘들게 해요. (가족 에너지 −3)';
+    },
+  },
+  pillscope: {
+    place:'💊 약 공부', emoji:'🧬', title:'갑상샘 방호 약품이 지켜 주는 것은?',
+    text:'가족들이 갑상샘 방호 약품에 대해 궁금해한다. 이 약은 무엇을 해 줄까?',
+    ref:'교재 18쪽 · 갑상샘 방호 약품은 뭔가요?',
+    choices:[
+      { t:'🛡️ 모든 방사성 물질로부터 몸 전체를 보호해 준다', ok:false, why:'모든 방사성 물질로부터 신체를 보호해 주지는 않아요.' },
+      { t:'🦋 방사성 요오드가 갑상샘에 쌓이는 것을 막아 준다', ok:true, why:'원전 사고 시 방사성 요오드가 갑상샘에 쌓이는 것을 방지하는 약품이에요. 주민센터·학교·병원 등에서 보관·관리해요.' },
+      { t:'🚪 먹으면 방사선이 사라져 밖에 나가도 안전하다', ok:false, why:'약을 먹어도 야외 활동은 삼가야 해요.' },
+    ],
+    after(ok) {
+      if (ok) { allEne(3); addLog('가족은 갑상샘 방호 약품이 “요오드 방패”라는 걸 이해하고 고개를 끄덕였습니다.'); return '약의 역할을 정확히 알았어요. (가족 에너지 +3)'; }
+      allEne(-3); return '약이 만능은 아니에요. 다시 기억해요! (가족 에너지 −3)';
+    },
+  },
+  level: {
+    place:'🚨 방송 해설', emoji:'🚦', title:'방사선비상 단계',
+    text:'방사선비상은 심각성 정도에 따라 백색·청색·적색으로 나뉘어요. 방사선 영향이 <b>부지 밖으로 미칠 것으로 예상</b>되어 주민 보호조치를 하는 가장 심각한 단계는?',
+    ref:'교재 13쪽 · 발전소에 사고가 난 걸 어떻게 알까요?',
+    choices:[
+      { t:'⚪ 백색비상 (초기대응)', ok:false, why:'백색비상은 방사선 영향이 발전소 시설 내로 국한될 것으로 예상되는 초기대응 단계예요.' },
+      { t:'🔵 청색비상 (주민 보호조치 준비)', ok:false, why:'청색비상은 영향이 부지 내로 국한될 것으로 예상되는 단계예요. 청색비상부터 주민들에게 전파돼요.' },
+      { t:'🔴 적색비상 (주민 보호조치)', ok:true, why:'적색비상은 방사선 영향이 부지 밖으로 미칠 것으로 예상되는 가장 심각한 단계로, 주민 보호조치를 해요.' },
+    ],
+    after(ok) {
+      if (ok) { allEne(3); addLog('라디오의 비상 단계 설명을 들으며 가족은 지금이 어떤 상황인지 침착하게 이해했습니다.'); return '지금 상황을 정확히 이해했어요. (가족 에너지 +3)'; }
+      allEne(-3); return '단계를 헷갈리면 대응도 헷갈려요. (가족 에너지 −3)';
+    },
+  },
+  three: {
+    place:'🎓 방재 교육', emoji:'🧠', title:'방사선 피해를 줄이는 3원칙은?',
+    text:'방재 교육 시간. 방사선 피해를 줄이기 위한 ‘3원칙’으로 알맞은 것은?',
+    ref:'교재 19쪽 · 방사선 피해를 줄이기 위한 3원칙',
+    choices:[
+      { t:'😎 오래 머물기 · 가까이 가서 보기 · 밖에서 기다리기', ok:false, why:'오히려 위험해지는 행동이에요.' },
+      { t:'⏱️ 노출 시간을 줄이고 · ↔️ 멀리 떨어지고 · 🏠 건물 안에서 피한다 (시간·거리·차폐)', ok:true, why:'방사선 노출 시간을 줄이고, 방사성 물질로부터 멀리 떨어지고, 건물 안에서 방사선을 피해요.' },
+      { t:'📸 사진 찍기 · 소문내기 · 구경하기', ok:false, why:'피해를 줄이는 방법이 아니에요.' },
+    ],
+    after(ok) {
+      if (ok) { allEne(4); addLog('가족은 “시간, 거리, 차폐!”를 한목소리로 외치며 서로 하이파이브를 했습니다.'); return '시간·거리·차폐! 완벽해요. (가족 에너지 +4)'; }
+      allEne(-3); return '3원칙을 다시 외워 봐요: 시간·거리·차폐! (가족 에너지 −3)';
+    },
+  },
+  evacuate: {
+    place:'🚌 소개 안내', emoji:'🚌', title:'소개(이동) 안내가 나왔다!',
+    text:'“오염되지 않은 지역으로 소개(이동)하세요.” 지자체의 안내 방송이 나왔다. 우리 가족은 어떻게 행동해야 할까?',
+    ref:'교재 14~15쪽 · 소개 / 집합 장소에 모임',
+    choices:[
+      { t:'🧳 아끼는 물건을 가능한 한 다 챙겨 간다', ok:false, why:'소개할 때는 필수물품만 챙겨요!' },
+      { t:'🎒 필수물품만 챙기고, 안내에 따라 집결 장소로 질서 있게 이동한다', ok:true, why:'소개는 방사선 오염지역에서 벗어나 오염되지 않은 지역으로 이동하는 것이에요. 필수물품만 챙겨요.' },
+      { t:'🙅 안내를 무시하고 우리끼리 마음대로 이동한다', ok:false, why:'지자체 안내에 따라 이동해야 오염 지역을 피할 수 있어요.' },
+    ],
+    after(ok) {
+      const heavy = S.dep.some(k => ITEMS[k].kind === 'trap');
+      if (ok) {
+        if (heavy) { allEne(-5); addLog('소개 버스를 타러 가는 길, 무겁게 챙겨 온 짐이 발목을 잡았지만 가족은 질서 있게 이동했습니다.'); return '질서 있게 이동했어요. 다만 무거운 짐 때문에 힘들었어요. (가족 에너지 −5)'; }
+        addLog('가족은 필수물품만 가볍게 챙겨, 안내에 따라 질서 있게 집결 장소로 이동했습니다.');
+        return '가볍게 챙겨서 질서 있게 이동했어요!';
+      }
+      allEne(-10); addLog('혼란 속에 소개 준비가 엉망이 되어 가족은 많이 지쳤습니다.');
+      return '혼란스러워서 가족이 많이 지쳤어요. (가족 에너지 −10)';
+    },
+  },
+  shelter: {
+    place:'🏟️ 광역 임시주거시설', emoji:'🏟️', title:'구호소에 도착했어요',
+    text:'소개 버스를 타고 광역 임시주거시설(이재민 구호소)에 도착했다. 시설에 들어가기 전에 가장 먼저 해야 할 일은?',
+    ref:'교재 15쪽 · 임시주거시설(이재민 구호소) 행동요령',
+    choices:[
+      { t:'🏃 가족과 떨어지기 싫어서 바로 안으로 들어간다', ok:false, why:'광역 임시주거시설에 들어가기 전에 방사성 물질 오염 검사를 받아야 해요.' },
+      { t:'🔍 방사성 물질 오염 검사를 받고, 이재민 등록·관리카드를 작성한다', ok:true, why:'오염 검사 → 이재민 등록(가족 단위) → 구호물자 배분 → 의료지원 순서로 진행돼요.' },
+      { t:'🏠 안전해 보여서 슬그머니 집으로 돌아간다', ok:false, why:'안내 없이 돌아가면 위험해요. 구호소 안내에 따라야 해요.' },
+    ],
+    after(ok) {
+      if (ok) { addLog('구호소 입구에서 가족은 차례로 오염 검사를 받고 이재민 등록을 마쳤습니다.'); return '검사와 등록을 마쳤어요!'; }
+      allEne(-10); addLog('검사를 건너뛰려다 안내 요원에게 제지당했습니다.');
+      return '안내 요원이 다시 검사 줄로 안내했어요. (가족 에너지 −10)';
+    },
+  },
+};
+
+const DAY_TEXT = {
+  window:'🚨 고리 원자력발전소에서 비상 사이렌이 울렸다. 청색비상에 이어 적색비상이 발령될 수도 있다는 소식. 우리 가족은 가져온 짐을 풀고 지하 대피소에 자리를 잡았다.',
+  pill:'📻 적색비상이 발령되었다. 방사성 물질이 발전소 밖으로 퍼질 수 있다고 한다. 오늘 밤 방사성 구름이 지나갈지도 모른다…',
+  clothes:'🌫️ 간밤에 방사성 구름이 지나갔다. 바깥 공기와 땅에는 방사성 물질이 남아 있을 수 있다.',
+  info:'📡 대피 생활이 이어지고 있다. 바깥 상황이 궁금해 불안해하는 가족들이 많다.',
+  power:'⚡ 대피소 전등이 깜빡이더니 전기가 완전히 나가 버렸다. 사방이 어두워졌다…',
+  term:'🧪 대피소 벽에 붙은 방재 포스터가 눈에 들어온다. 방사선? 방사능? 아리송한 용어들…',
+  outing:'🕰️ 대피 생활이 길어지고 있다. 아이들은 답답해하며 바깥에 나가고 싶어 한다.',
+  school:'🏫 오늘은 방재 훈련 시간. 아이들이 “학교에서 비상방송이 울리면 어떻게 해요?”라고 묻는다.',
+  natural:'🍌 둘째가 바나나 그림이 그려진 방재 포스터를 가리키며 고개를 갸웃한다.',
+  pillscope:'💊 가족들이 갑상샘 방호 약품에 대해 궁금해한다. 정말 만능일까?',
+  level:'🚦 라디오에서 “비상 단계”에 대한 해설이 흘러나온다.',
+  three:'📝 방재 교육 시간. 방사선 피해를 줄이는 방법을 정리해 보기로 했다.',
+  evacuate:'🚌 지자체의 소개 안내 방송이 나왔다. 오염되지 않은 지역으로 이동해야 한다!',
+  shelter:'🏟️ 소개 버스를 타고 광역 임시주거시설(이재민 구호소)에 도착했다. 드디어 14일째!',
+};
+const RADIO_TIPS = [
+  '방사선은 사람의 감각으로 확인할 수 없어요. 재난방송을 꼭 들어요.',
+  '실내에 머물 때는 창문을 닫고 환풍기를 끄거나 막아요.',
+  '갑상샘 방호 약품은 방송 지시가 있을 때만 먹어요.',
+  '방사선 피해를 줄이는 3원칙은 시간·거리·차폐예요.',
+  '야외 활동은 안전이 확인될 때까지 삼가요.',
+  '소개 때는 필수물품만 챙겨요.',
+  '구호소에서는 먼저 오염 검사를 받아요.',
+];
+
+/* =====================================================================
+ *  상태
+ * ===================================================================== */
+let S = null;
+let P = null;
+const K = { up:false, down:false, left:false, right:false };
+const J = { x:0, y:0 };   // 가상 조이스틱
+let raf = 0, lastT = 0;
+let miniClick = null, miniDown = null, miniKey = null, miniCleanup = [];
+let quizTimer = null;
+
+const member = id => S.fam.find(m => m.id === id);
+const ene = (id, v) => { const m = member(id); m.ene = clamp(m.ene + v, 0, 100); };
+const allEne = v => S.fam.forEach(m => m.ene = clamp(m.ene + v, 0, 100));
+const addLog = t => S.log.push({ d:S.day, t });
+
+function newGame() {
+  // 이벤트 배정: 1일차·2일차는 부드러운 사건, 3~13일차는 섞어서 배정
+  const pool = shuffle(['merchant','robber','rescue','neighbor','bug','pipe','nightmare','rumor','dark','signal','dj']);
+  const evSeq = { 1:'cry', 2:'bored' };
+  pool.forEach((id, i) => evSeq[3 + i] = id);
+  S = {
+    N:DAYS, day:1, stage:'report',
+    stock:{ water:0, staple:0, fresh:0, snack:0 },
+    uses:{ soap:0, game:0, kit:0, insect:0, ext:0 }, pillDoses:0,
+    has:{}, dep:[], lost:[], trips:0, initWater:0, initStaple:0,
+    fam: FAMILY.map(f => ({ ...f, hyd:80, sat:80, ene:70, contam:false, contamDays:0, sick:false, thy:false, hurt:false, hurtDays:0, pill:null, gotW:false, gotF:false })),
+    sealed:true, instructionDone:false,
+    quizSeq:QSEQ.slice(), quizCorrect:0, quizTotal:0, wrongs:[], streak:0, stars:0, bestPill:0,
+    log:[], evSeq, evt:null, gifts:[],
+    quiz:null, quizRes:null, msg:'', cardToday:false, chessToday:false, talkToday:false, expToday:false,
+    plays:0, crates:0, crateDone:false, nightLines:[], dropNote:'', spoiled:0, qStart:0,
+    doors:0, robbed:false, scammed:false, bugIgnored:false, bugSolved:false, pipeFail:false, signalOk:false,
+    expeds:0, expUnsafe:false, expSafeCount:0, everSick:false,
+  };
+}
+
+/* =====================================================================
+ *  오버레이 / 미니게임 공통
+ * ===================================================================== */
+const ovBox = $('overlay-box');
+function openOverlay(html) { ovBox.innerHTML = html; $('overlay').classList.remove('hidden'); }
+function closeOverlay() {
+  miniCleanup.forEach(f => f()); miniCleanup = [];
+  miniClick = miniDown = miniKey = null;
+  $('overlay').classList.add('hidden');
+}
+ovBox.addEventListener('click', e => { if (miniClick) miniClick(e); });
+ovBox.addEventListener('pointerdown', e => { if (miniDown) miniDown(e); });
+
+/* =====================================================================
+ *  1단계 : Canvas (스크롤 맵, 손 4칸)
+ * ===================================================================== */
+const cv = $('cv'), ctx = cv.getContext('2d');
+
+function startP1() {
+  newGame();
+  P = { x:HATCH.x + HATCH.w / 2, y:HATCH.y + HATCH.h / 2, hands:[], dep:[], trips:0, left:P1_TIME, done:false, near:null, endWarn:0, path:[], goal:null, goalPt:null, view:null,
+        items: SPAWNS.map((s,i) => ({ id:i, ...s, taken:false })) };
+  K.up = K.down = K.left = K.right = false;
+  J.x = J.y = 0; $('joy-knob').style.transform = 'translate(0,0)';
+  renderHands(); renderDep();
+  $('timer').textContent = P1_TIME; $('timer').classList.remove('urgent');
+  $('timer-bar').style.width = '100%'; $('timer-bar').style.background = 'var(--sky)';
+  showScreen('screen-p1');
+  lastT = performance.now();
+  cancelAnimationFrame(raf);
+  raf = requestAnimationFrame(frame);
+}
+const handsUsed = () => P.hands.reduce((a,it) => a + ITEMS[it.key].slots, 0);
+function hitsWall(x, y) {
+  const r = 12;
+  for (const w of WALLS) if (x + r > w[0] && x - r < w[0] + w[2] && y + r > w[1] && y - r < w[1] + w[3]) return true;
+  return false;
+}
+const inHatch = () => P.x > HATCH.x && P.x < HATCH.x + HATCH.w && P.y > HATCH.y && P.y < HATCH.y + HATCH.h;
+
+function frame(t) {
+  if (!P || P.done) return;
+  const dt = Math.min(0.05, (t - lastT) / 1000); lastT = t;
+  update(dt); if (!P.done) { draw(t / 1000); raf = requestAnimationFrame(frame); }
+}
+function update(dt) {
+  P.left -= dt;
+  const left = Math.max(0, P.left);
+  $('timer').textContent = Math.ceil(left);
+  $('timer-bar').style.width = (left / P1_TIME * 100) + '%';
+  if (left <= 10) { $('timer').classList.add('urgent'); $('timer-bar').style.background = 'var(--alert)'; }
+  if (P.left <= 0) { finishP1('time'); return; }
+
+  let dx = (K.right?1:0) - (K.left?1:0) + J.x, dy = (K.down?1:0) - (K.up?1:0) + J.y;
+  const mag = Math.hypot(dx, dy);
+  if (mag > 0.01) {
+    // 직접 조작하면 자동 이동 취소
+    P.path = []; P.goal = null; P.goalPt = null;
+    if (mag > 1) { dx /= mag; dy /= mag; }
+  } else if (P.path && P.path.length) {
+    const wp = P.path[0], vx = wp.x - P.x, vy = wp.y - P.y, d = Math.hypot(vx, vy);
+    if (d < 7) P.path.shift(); else { dx = vx / d; dy = vy / d; }
+    if (!P.path.length) {
+      const g = P.goal; P.goal = null; P.goalPt = null;
+      if (g && g.it && !g.it.taken && Math.hypot(g.it.x - P.x, g.it.y - P.y) < 56) { P.near = g.it; grab(); }
+    }
+  }
+  const sp = 175 * dt;
+  const nx = P.x + dx * sp; if (!hitsWall(nx, P.y)) P.x = nx; else if (P.path && P.path.length) P.path = planPath(P.goalPt ? P.goalPt.x : P.x, P.goalPt ? P.goalPt.y : P.y);
+  const ny = P.y + dy * sp; if (!hitsWall(P.x, ny)) P.y = ny;
+
+  let best = null, bd = 42;
+  for (const it of P.items) { if (it.taken) continue; const d = Math.hypot(it.x - P.x, it.y - P.y); if (d < bd) { bd = d; best = it; } }
+  P.near = best;
+
+  if (inHatch() && P.hands.length) {
+    const n = P.hands.length;
+    P.hands.forEach(it => P.dep.push(it.key));
+    P.hands = []; P.trips++;
+    toast(`🏠 대피소에 <b>${n}개</b> 넣었어요! (${P.trips}번째 왕복)`, 1400);
+    renderHands(); renderDep();
+  }
+}
+function grab() {
+  if (!P || P.done) return;
+  const it = P.near;
+  if (!it) { toast('✋ 물건에 더 가까이 가 보세요', 900); return; }
+  const def = ITEMS[it.key];
+  if (handsUsed() + def.slots > SLOTS) { toast(`✋ 손이 모자라요! (${def.name}은(는) ${def.slots}칸) <b>지하 대피소</b>에 넣고 다시 와요`, 1900); return; }
+  it.taken = true; P.hands.push(it);
+  if (def.good) toast(`✅ ${def.emoji} <b>${def.name}</b> 집었어요! (${def.slots}칸)`, 1100);
+  else toast(`${def.emoji} ${def.tip}`, 2600);
+  renderHands();
+}
+function draw(t) {
+  const V = view(), camX = V.camX, camY = V.camY; P.view = V;
+  ctx.clearRect(0, 0, VIEW_W, VIEW_H);
+  ctx.fillStyle = '#c9ccf5'; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+  ctx.save(); ctx.scale(V.Z, V.Z); ctx.translate(-camX, -camY);
+  ROOMS_DRAW.forEach(r => { ctx.fillStyle = r.c; ctx.fillRect(r.x, r.y, r.w, r.h); });
+  ctx.strokeStyle = 'rgba(0,0,0,.05)'; ctx.lineWidth = 1;
+  for (let x = 26; x < WORLD_W - 20; x += 40) { ctx.beginPath(); ctx.moveTo(x, 26); ctx.lineTo(x, 474); ctx.stroke(); }
+  for (let y = 26; y < 474; y += 40) { ctx.beginPath(); ctx.moveTo(26, y); ctx.lineTo(WORLD_W - 26, y); ctx.stroke(); }
+  ctx.fillStyle = 'rgba(27,31,107,.75)'; ctx.font = '17px "Jua", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ROOMS_DRAW.forEach(r => ctx.fillText(r.name, r.x + 10, r.y + 6));
+  ctx.fillStyle = '#3b3f7a'; WALLS.forEach(w => ctx.fillRect(w[0], w[1], w[2], w[3]));
+
+  // 지하 대피소
+  ctx.fillStyle = '#8a5a2b'; ctx.fillRect(HATCH.x, HATCH.y, HATCH.w, HATCH.h);
+  ctx.strokeStyle = '#ffc400'; ctx.lineWidth = 4; ctx.strokeRect(HATCH.x + 2, HATCH.y + 2, HATCH.w - 4, HATCH.h - 4);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '28px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; ctx.fillStyle = '#000';
+  ctx.fillText('🪜', HATCH.x + HATCH.w / 2, HATCH.y + 26);
+  ctx.font = '12px "Jua", sans-serif'; ctx.fillStyle = '#fff';
+  ctx.fillText('지하 대피소', HATCH.x + HATCH.w / 2, HATCH.y + 52);
+  ctx.fillText('여기에 넣어요!', HATCH.x + HATCH.w / 2, HATCH.y + 66);
+
+  P.items.forEach((it, i) => {
+    if (it.taken) return;
+    if (it.x < camX - 40 || it.x > camX + V.vw + 40 || it.y < camY - 40 || it.y > camY + V.vh + 40) return;
+    const def = ITEMS[it.key]; const by = Math.sin(t * 3 + i) * 2.5;
+    ctx.fillStyle = 'rgba(0,0,0,.15)'; ctx.beginPath(); ctx.ellipse(it.x, it.y + 19, 15, 5, 0, 0, 7); ctx.fill();
+    ctx.font = '30px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; ctx.fillStyle = '#000';
+    ctx.fillText(def.emoji, it.x, it.y + by);
+    ctx.font = '11px "Jua", sans-serif'; ctx.fillStyle = '#1b1f6b';
+    ctx.fillText(def.short + (def.slots > 1 ? ` (${def.slots}칸)` : ''), it.x, it.y + 31);
+  });
+  if (P.near) {
+    ctx.strokeStyle = '#ffc400'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(P.near.x, P.near.y, 25, 0, 7); ctx.stroke();
+    ctx.font = '13px "Jua", sans-serif'; ctx.fillStyle = '#e5322d'; ctx.fillText('✋ 스페이스', P.near.x, P.near.y - 34);
+  }
+  ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(P.x, P.y + 16, 14, 5, 0, 0, 7); ctx.fill();
+  ctx.font = '34px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; ctx.fillStyle = '#000';
+  ctx.fillText('🏃', P.x, P.y);
+  if (P.hands.length) {
+    const e = P.hands.map(it => ITEMS[it.key].emoji);
+    ctx.font = '18px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+    e.forEach((em, i) => ctx.fillText(em, P.x + (i - (e.length - 1) / 2) * 20, P.y - 30));
+  }
+  if (P.goalPt && P.path && P.path.length) {
+    ctx.strokeStyle = '#e5322d'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(P.goalPt.x, P.goalPt.y, 11 + Math.sin(t * 8) * 3, 0, 7); ctx.stroke();
+  }
+  ctx.restore();
+
+  // 미니맵
+  const ms = 0.135, mw = WORLD_W * ms, mh = 500 * ms, mx = VIEW_W - mw - 10, my = 10;
+  ctx.fillStyle = 'rgba(255,255,255,.82)'; ctx.fillRect(mx - 3, my - 3, mw + 6, mh + 6);
+  ctx.strokeStyle = '#1b1f6b'; ctx.lineWidth = 2; ctx.strokeRect(mx - 3, my - 3, mw + 6, mh + 6);
+  ROOMS_DRAW.forEach(r => { ctx.fillStyle = r.c; ctx.fillRect(mx + r.x * ms, my + r.y * ms, r.w * ms, r.h * ms); });
+  ctx.fillStyle = '#8a5a2b'; ctx.fillRect(mx + HATCH.x * ms, my + HATCH.y * ms, HATCH.w * ms, HATCH.h * ms);
+  P.items.forEach(it => { if (it.taken) return; ctx.fillStyle = ITEMS[it.key].good ? '#2e9b4a' : '#999'; ctx.fillRect(mx + it.x * ms - 1, my + it.y * ms - 1, 3, 3); });
+  ctx.fillStyle = '#e5322d'; ctx.beginPath(); ctx.arc(mx + P.x * ms, my + P.y * ms, 3.5, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#1b1f6b'; ctx.lineWidth = 1; ctx.strokeRect(mx + camX * ms, my + camY * ms, V.vw * ms, V.vh * ms);
+  ctx.font = '10px "Jua", sans-serif'; ctx.fillStyle = '#8a5a2b'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText('🪜', mx + (HATCH.x + HATCH.w / 2) * ms, my + mh + 3);
+}
+
+function renderHands() {
+  const cells = [];
+  P.hands.forEach(it => { for (let i = 0; i < ITEMS[it.key].slots; i++) cells.push(i === 0 ? ITEMS[it.key].emoji : '▫️'); });
+  let h = '';
+  for (let i = 0; i < SLOTS; i++) h += `<span class="slot ${cells[i] ? 'full' : ''}">${cells[i] || ''}</span> `;
+  $('hands').innerHTML = h;
+  $('hand-n').textContent = handsUsed();
+  $('trip-n').textContent = P.trips;
+  $('hand-list').innerHTML = P.hands.length
+    ? P.hands.map(it => `<button class="btn px-3 py-1 text-base bg-white pop" data-drop="${it.id}">${ITEMS[it.key].emoji} ${ITEMS[it.key].name}</button>`).join('')
+    : '<span class="text-slate-400">비어 있어요. 물건 가까이에서 ✋ 집기!</span>';
+}
+function renderDep() {
+  const cnt = {}; P.dep.forEach(k => cnt[k] = (cnt[k] || 0) + 1);
+  const keys = Object.keys(cnt);
+  $('dep-list').innerHTML = keys.length
+    ? keys.map(k => `<span class="px-2 py-1 rounded-full text-sm pop" style="background:${ITEMS[k].good ? '#e4f7e1' : '#fff0d6'};border:2px solid var(--navy)">${ITEMS[k].emoji} ${ITEMS[k].short} ×${cnt[k]}</span>`).join('')
+    : '<span class="text-slate-400">아직 아무것도 없어요</span>';
+}
+$('hand-list').addEventListener('click', e => {
+  const b = e.target.closest('[data-drop]'); if (!b || !P || P.done) return;
+  const id = +b.dataset.drop; const idx = P.hands.findIndex(it => it.id === id); if (idx < 0) return;
+  const it = P.hands.splice(idx, 1)[0];
+  it.taken = false; it.x = P.x; it.y = P.y;
+  toast(`${ITEMS[it.key].emoji} 내려놓았어요`, 800);
+  renderHands();
+});
+
+const KEYMAP = { ArrowUp:'up', w:'up', W:'up', ArrowDown:'down', s:'down', S:'down', ArrowLeft:'left', a:'left', A:'left', ArrowRight:'right', d:'right', D:'right' };
+window.addEventListener('keydown', e => {
+  if (miniKey && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); miniKey(e); return; }
+  if (!P || P.done || !$('screen-p1').classList.contains('active')) return;
+  const k = KEYMAP[e.key];
+  if (k) { K[k] = true; e.preventDefault(); }
+  else if (e.key === ' ' || e.key === 'e' || e.key === 'E' || e.key === 'Enter') { e.preventDefault(); if (!e.repeat) grab(); }
+});
+window.addEventListener('keyup', e => { const k = KEYMAP[e.key]; if (k) K[k] = false; });
+document.querySelectorAll('.dpad button').forEach(b => {
+  const k = b.dataset.k;
+  const on = e => { e.preventDefault(); K[k] = true; };
+  const off = e => { e.preventDefault(); K[k] = false; };
+  b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off);
+  b.addEventListener('pointerleave', off); b.addEventListener('pointercancel', off);
+});
+$('btn-grab').addEventListener('pointerdown', e => { e.preventDefault(); grab(); });
+
+/* PATHFIND START */
+function view() {
+  const Z = (cv.clientWidth && cv.clientWidth < 560) ? 1.4 : 1;   // 작은 화면에서는 확대
+  const vw = VIEW_W / Z, vh = VIEW_H / Z;
+  return { Z, vw, vh, camX:clamp(P.x - vw / 2, 0, WORLD_W - vw), camY:clamp(P.y - vh / 2, 0, VIEW_H - vh) };
+}
+const CELL = 20, GC = Math.ceil(WORLD_W / CELL), GR = Math.ceil(VIEW_H / CELL);
+let blocked = null;
+function buildGrid() {
+  blocked = new Uint8Array(GC * GR);
+  for (let r = 0; r < GR; r++) for (let c = 0; c < GC; c++) blocked[r * GC + c] = hitsWall(c * CELL + CELL / 2, r * CELL + CELL / 2) ? 1 : 0;
+}
+function lineClear(ax, ay, bx, by) {
+  const n = Math.ceil(Math.hypot(bx - ax, by - ay) / 8);
+  for (let i = 1; i <= n; i++) { const t = i / n; if (hitsWall(ax + (bx - ax) * t, ay + (by - ay) * t)) return false; }
+  return true;
+}
+function planPath(tx, ty) {
+  if (!blocked) buildGrid();
+  tx = clamp(tx, 20, WORLD_W - 20); ty = clamp(ty, 20, 480);
+  const sc = clamp(Math.floor(P.x / CELL), 0, GC - 1), sr = clamp(Math.floor(P.y / CELL), 0, GR - 1);
+  let gc = clamp(Math.floor(tx / CELL), 0, GC - 1), gr = clamp(Math.floor(ty / CELL), 0, GR - 1);
+  let exact = true;
+  if (blocked[gr * GC + gc]) {
+    exact = false; let found = false;
+    for (let rad = 1; rad <= 5 && !found; rad++)
+      for (let dr = -rad; dr <= rad && !found; dr++)
+        for (let dc = -rad; dc <= rad && !found; dc++) {
+          const rr = gr + dr, cc = gc + dc;
+          if (rr < 0 || cc < 0 || rr >= GR || cc >= GC) continue;
+          if (!blocked[rr * GC + cc]) { gr = rr; gc = cc; found = true; }
+        }
+    if (!found) return [];
+  }
+  const start = sr * GC + sc, goal = gr * GC + gc;
+  const prev = new Int32Array(GC * GR).fill(-2); prev[start] = -1;
+  const q = [start]; let qi = 0;
+  const dirs = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+  while (qi < q.length) {
+    const cur = q[qi++]; if (cur === goal) break;
+    const cr = (cur / GC) | 0, cc = cur % GC;
+    for (const [dc, dr] of dirs) {
+      const nr = cr + dr, nc = cc + dc;
+      if (nr < 0 || nc < 0 || nr >= GR || nc >= GC) continue;
+      const ni = nr * GC + nc;
+      if (prev[ni] !== -2 || blocked[ni]) continue;
+      if (dc && dr && (blocked[cr * GC + nc] || blocked[nr * GC + cc])) continue;
+      prev[ni] = cur; q.push(ni);
+    }
+  }
+  if (prev[goal] === -2) return [];
+  const cells = []; for (let c = goal; c !== -1; c = prev[c]) cells.push(c); cells.reverse();
+  const pts = [{ x:P.x, y:P.y }].concat(cells.map(i => ({ x:(i % GC) * CELL + CELL / 2, y:((i / GC) | 0) * CELL + CELL / 2 })));
+  if (exact && !hitsWall(tx, ty)) pts.push({ x:tx, y:ty });
+  const out = []; let i = 0;
+  while (i < pts.length - 1) {
+    let j = pts.length - 1;
+    while (j > i + 1 && !lineClear(pts[i].x, pts[i].y, pts[j].x, pts[j].y)) j--;
+    out.push(pts[j]); i = j;
+  }
+  return out;
+}
+/* PATHFIND END */
+
+// 화면을 톡 누르면 그 자리(또는 물건)로 자동 이동
+cv.addEventListener('pointerdown', e => {
+  if (!P || P.done) return;
+  e.preventDefault();
+  const r = cv.getBoundingClientRect(), V = P.view || view();
+  const wx = (e.clientX - r.left) * (VIEW_W / r.width) / V.Z + V.camX;
+  const wy = (e.clientY - r.top) * (VIEW_H / r.height) / V.Z + V.camY;
+  let best = null, bd = 56;
+  for (const it of P.items) { if (it.taken) continue; const d = Math.hypot(it.x - wx, it.y - wy); if (d < bd) { bd = d; best = it; } }
+  if (best) {
+    if (Math.hypot(best.x - P.x, best.y - P.y) < 44) { P.near = best; grab(); return; }
+    const path = planPath(best.x, best.y);
+    if (!path.length) { toast('😅 거기로는 갈 수 없어요', 900); return; }
+    P.path = path; P.goal = { it:best }; P.goalPt = { x:best.x, y:best.y };
+    return;
+  }
+  const path = planPath(wx, wy);
+  if (!path.length) { toast('😅 거기로는 갈 수 없어요', 900); return; }
+  P.path = path; P.goal = null; P.goalPt = { x:wx, y:wy };
+});
+
+// 가상 조이스틱
+(() => {
+  const jb = $('joy'), jk = $('joy-knob'); let jid = null;
+  const move = e => {
+    const r = jb.getBoundingClientRect(), max = r.width / 2 - 8;
+    let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+    const d = Math.hypot(dx, dy); if (d > max) { dx *= max / d; dy *= max / d; }
+    jk.style.transform = `translate(${dx}px,${dy}px)`;
+    let nx = dx / max, ny = dy / max; if (Math.hypot(nx, ny) < 0.18) { nx = 0; ny = 0; }
+    J.x = nx; J.y = ny;
+  };
+  const end = e => { if (e.pointerId !== jid) return; jid = null; J.x = J.y = 0; jk.style.transform = 'translate(0,0)'; };
+  jb.addEventListener('pointerdown', e => { e.preventDefault(); jid = e.pointerId; jb.setPointerCapture(jid); move(e); });
+  jb.addEventListener('pointermove', e => { if (e.pointerId === jid) move(e); });
+  jb.addEventListener('pointerup', end); jb.addEventListener('pointercancel', end);
+})();
+$('btn-hatch').addEventListener('click', () => {
+  if (!P || P.done) return;
+  if (P.hands.length && Date.now() - P.endWarn > 4000) {
+    P.endWarn = Date.now();
+    toast('✋ 손에 든 물건이 있어요! 대피소에 넣지 않으면 <b>못 가져가요</b>. 그래도 끝내려면 한 번 더 눌러요', 3200);
+    return;
+  }
+  finishP1('button');
+});
+
+function finishP1(reason) {
+  P.done = true; cancelAnimationFrame(raf);
+  K.up = K.down = K.left = K.right = false;
+  S.lost = P.hands.map(it => it.key); P.hands = [];
+  S.dep = P.dep.slice(); S.trips = P.trips;
+  S.dep.forEach(k => {
+    const d = ITEMS[k];
+    if (k === 'water') S.stock.water += 3;
+    else if (k === 'bigwater') S.stock.water += 9;
+    else if (k === 'can') S.stock.staple += 3;
+    else if (k === 'canbox') S.stock.staple += 8;
+    else if (k === 'ricebag') S.stock.staple += 6;
+    else if (k === 'ramen' || k === 'rice') S.stock.staple += 2;
+    else if (d.kind === 'fresh') S.stock.fresh += 2;
+    else if (d.kind === 'snack') S.stock.snack += 1;
+    else if (k === 'radio') S.has.radio = true;
+    else if (k === 'pill') S.pillDoses = 4;
+    else if (k === 'mask') S.has.mask = true;
+    else if (k === 'gasmask') S.has.gas = true;
+    else if (k === 'soap') S.uses.soap += 3;
+    else if (k === 'firstaid') S.uses.kit += 3;
+    else if (k === 'insect') S.uses.insect += 2;
+    else if (k === 'extinguisher') S.uses.ext += 2;
+    else if (k === 'guide') S.has.guide = true;
+    else if (k === 'map') S.has.map = true;
+    else if (k === 'toolbox') S.has.toolbox = true;
+    else if (k === 'game') S.uses.game = 2;
+    else if (k === 'cards') S.has.cards = true;
+    else if (k === 'chess') S.has.chess = true;
+    else if (k === 'bear') S.has.bear = true;
+  });
+  S.initWater = S.stock.water; S.initStaple = S.stock.staple;
+  renderSummary(reason);
+  showScreen('screen-p1-sum');
+}
+function renderSummary(reason) {
+  $('sum-title').textContent = reason === 'time' ? '⏰ 60초 종료! 대피소 점검' : '🪜 대피소 점검!';
+  const cnt = {}; S.dep.forEach(k => cnt[k] = (cnt[k] || 0) + 1);
+  const keys = Object.keys(cnt);
+  let h = '';
+  h += keys.length
+    ? `<div class="rounded-2xl p-3" style="background:#e4f7e1"><b>🏠 대피소에 모은 물건 (왕복 ${S.trips}번)</b><ul class="mt-1 space-y-1">${keys.map(k => `<li>${ITEMS[k].emoji} <b>${ITEMS[k].name}</b> ×${cnt[k]} ${ITEMS[k].good ? '✅' : '⚠️'} <span class="text-sm text-slate-600">— ${ITEMS[k].why}</span></li>`).join('')}</ul></div>`
+    : '<div class="rounded-2xl p-3" style="background:#ffe1de">😱 대피소에 아무것도 못 넣었어요! 그래도 구호물자가 올 거예요. 힘내요!</div>';
+  const tips = [...new Set(keys.filter(k => ITEMS[k].tip).map(k => `${ITEMS[k].emoji} ${ITEMS[k].tip}`))];
+  if (tips.length) h += `<div class="rounded-2xl p-3" style="background:#fff0d6"><b>🧑‍🏫 방재 선생님의 한마디</b><ul class="mt-1 space-y-1 text-base">${tips.map(t => `<li>${t}</li>`).join('')}</ul></div>`;
+  if (S.lost.length) h += `<div class="rounded-2xl p-3" style="background:#ffe1de">⏰ 시간이 끝나서 손에 든 <b>${S.lost.map(k => ITEMS[k].emoji).join(' ')}</b>은(는) 가져오지 못했어요. 다음엔 시간 안에 대피소에 넣어요!</div>`;
+  const missing = ['radio','pill','soap'].filter(k => !S.dep.includes(k)).concat(!S.dep.includes('mask') && !S.dep.includes('gasmask') ? ['mask'] : []);
+  if (missing.length) h += `<div class="rounded-2xl p-3" style="background:#eef6ff">🤔 아직 못 가져온 필수 장비: ${missing.map(k => ITEMS[k].emoji + ' ' + ITEMS[k].name).join(' · ')}<br><span class="text-sm text-slate-600">없으면 대피소 생활에서 어떤 일이 생기는지 지켜봐요!</span></div>`;
+  h += `<div class="rounded-2xl p-3" style="background:#dff0ff">📦 시작 물자: 💧 물 ${S.stock.water} · 🥫 식량 ${S.stock.staple}${S.stock.fresh ? ` · 🍞 상하기 쉬운 음식 ${S.stock.fresh}` : ''}${S.stock.snack ? ` · 🍪 간식 ${S.stock.snack}` : ''}<br><span class="text-sm">14일은 길어요! 구호물자(4·8·12일차)와 사건 속 거래로 더 얻을 수 있어요.</span></div>`;
+  $('sum-body').innerHTML = h;
+}
+$('btn-start').addEventListener('click', startP1);
+$('btn-p2').addEventListener('click', () => { startDay(true); showScreen('screen-p2'); });
+
+/* =====================================================================
+ *  2단계 : 대피소 생활
+ * ===================================================================== */
+const EVT_NEEDS_RADIO = { signal:1, dj:1 };
+function startDay(first) {
+  if (!first) S.day++;
+  S.stage = 'report'; S.msg = ''; S.cardToday = false; S.chessToday = false; S.talkToday = false; S.expToday = false; S.crateDone = false;
+  S.fam.forEach(m => { m.gotW = false; m.gotF = false; });
+  S.dropNote = '';
+  if (S.day === 2 && S.stock.fresh > 0) {
+    S.spoiled = S.stock.fresh; S.stock.fresh = 0;
+    S.dropNote = `🤢 하루가 지나 <b>상하기 쉬운 음식(🍞 ${S.spoiled}개)</b>이 모두 상했어요! 다음엔 통조림·라면처럼 오래가는 음식을 챙겨요.`;
+    addLog('냉장고가 꺼진 탓에 챙겨 온 빵과 우유는 하룻밤 새 상해 버렸습니다.');
+  }
+  if (DROP_DAYS.includes(S.day)) {
+    S.stock.water += 5; S.stock.staple += 5;
+    S.dropNote += (S.dropNote ? '<br>' : '') + '📦 구호물자가 도착했어요! 💧 물 +5 · 🥫 식량 +5';
+    addLog(`${S.day}일차, 구호물자가 도착해 가족은 한숨 돌렸습니다.`);
+  }
+  S.gifts.filter(g => g.day === S.day).forEach(g => { g.apply(); S.dropNote += (S.dropNote ? '<br>' : '') + g.text; });
+  S.gifts = S.gifts.filter(g => g.day !== S.day);
+
+  let id = S.evSeq[S.day];
+  if (id && EVT_NEEDS_RADIO[id] && !S.has.radio) id = 'blind';
+  S.evt = id ? { id, cur:EVTS[id].start(), done:false, result:'' } : null;
+
+  const qk = S.quizSeq[S.day - 1];
+  S.quiz = { key:qk, def:QUIZZES[qk], choices:shuffle(QUIZZES[qk].choices) };
+  S.quizRes = null; S.quizInit = false;
+  renderAll();
+}
+const bar = (v, c) => `<div class="bar"><div style="width:${v}%;background:${c}"></div></div>`;
+function renderAll() { renderHead(); renderFam(); renderStage(); }
+
+function renderHead() {
+  const chips = [];
+  const add = (cond, txt) => { if (cond) chips.push(txt); };
+  add(S.has.radio, '📻 라디오'); add(S.has.gas, '🥽 방독면'); add(S.has.mask, '😷 마스크');
+  add(S.pillDoses > 0, `💊 ×${S.pillDoses}`); add(S.uses.soap > 0, `🧼 ×${S.uses.soap}`); add(S.uses.kit > 0, `🩹 ×${S.uses.kit}`);
+  add(S.uses.insect > 0, `🧴 ×${S.uses.insect}`); add(S.uses.ext > 0, `🧯 ×${S.uses.ext}`);
+  add(S.has.guide, '📘 안내서'); add(S.has.map, '🗺️ 지도'); add(S.has.toolbox, '🧰 공구함');
+  add(S.has.cards, '🃏 카드'); add(S.has.chess, '♟️ 체스판'); add(S.uses.game > 0, `🎮 ×${S.uses.game}`); add(S.has.bear, '🧸 곰인형');
+  $('p2-head').innerHTML = `
+    <div class="flex items-center justify-between flex-wrap gap-2">
+      <div class="text-xl">🏠 <b>${S.day}일차</b> <span class="text-sm text-slate-500">/ 총 ${S.N}일 (2주)</span></div>
+      <div class="text-lg">💧 <b>${S.stock.water}</b> &nbsp; 🥫 <b>${S.stock.staple}</b>
+        ${S.stock.fresh ? `&nbsp; <span style="color:var(--alert)">🍞 <b>${S.stock.fresh}</b><span class="text-xs">(내일 상해요!)</span></span>` : ''}
+        ${S.stock.snack ? `&nbsp; 🍪 <b>${S.stock.snack}</b>` : ''}</div>
+    </div>
+    <div class="bar mt-2" style="height:12px"><div style="width:${(S.day - 1) / S.N * 100}%;background:var(--sky)"></div></div>
+    <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm">${chips.length ? chips.join('') : '<span class="text-slate-400">가진 장비가 없어요</span>'}</div>`;
+}
+function healthBadge(m) {
+  const b = [];
+  if (!m.contam && !m.thy && !m.hurt && !m.sick) b.push('<span class="px-2 rounded-full text-sm" style="background:#d6f5d6">✅ 정상</span>');
+  if (m.contam) b.push(`<span class="px-2 rounded-full text-sm" style="background:#ffd9d6">☢️ 외부 오염${m.contamDays ? ` (${m.contamDays}일째)` : ''}</span>`);
+  if (m.sick) b.push('<span class="px-2 rounded-full text-sm" style="background:#ffc9d6">🤒 병듦</span>');
+  if (m.thy) b.push('<span class="px-2 rounded-full text-sm" style="background:#ffe9b8">☢️ 갑상샘 우려</span>');
+  if (m.hurt) b.push('<span class="px-2 rounded-full text-sm" style="background:#ffe0f0">🤕 부상</span>');
+  return b.join(' ');
+}
+const PILL_LABEL = { early:'💊 너무 일찍 먹음', full:'💊 제때 복용!', half:'💊 늦은 복용(효과↓)', late:'💊 너무 늦게 먹음' };
+function renderFam() {
+  $('p2-fam').innerHTML = S.fam.map(m => {
+    const hs = hydState(m.hyd), ss = satState(m.sat);
+    return `
+    <div class="card p-2 sm:p-3" style="box-shadow:0 4px 0 var(--navy)">
+      <div class="text-lg">${m.emoji} <b>${m.name}</b> ${m.ene <= 25 ? '<span title="에너지가 낮아요">😴</span>' : ''}</div>
+      <div class="text-xs mt-1 flex justify-between"><span>수분</span><b style="color:${hs.c}">${hs.t}</b></div>${bar(m.hyd, hs.c)}
+      <div class="text-xs mt-1 flex justify-between"><span>배</span><b style="color:${ss.c}">${ss.t}</b></div>${bar(m.sat, ss.c)}
+      <div class="text-xs mt-1">⚡ 에너지</div>${bar(m.ene, m.ene < 25 ? '#e5322d' : '#2e9b4a')}
+      <div class="mt-2 flex flex-wrap gap-1">${healthBadge(m)}${m.pill ? `<span class="px-2 rounded-full text-xs" style="background:#eef">${PILL_LABEL[m.pill]}</span>` : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderStage() {
+  clearInterval(quizTimer);
+  const box = $('p2-stage');
+  if (S.stage === 'report') box.innerHTML = reportHTML();
+  else if (S.stage === 'quiz') { box.innerHTML = quizHTML(); if (!S.quizRes) startQuizTimer(); }
+  else if (S.stage === 'manage') box.innerHTML = manageHTML();
+  else if (S.stage === 'night') box.innerHTML = nightHTML();
+}
+
+/* ---------- 아침: 재난 일기 + 오늘의 사건 ---------- */
+function reportHTML() {
+  const qk = S.quizSeq[S.day - 1];
+  let h = `<div class="text-sm text-slate-500">📓 재난 일기</div><h3 class="text-2xl" style="color:var(--navy)">${S.day}일차 아침</h3>`;
+  h += `<p class="mt-2 text-lg leading-relaxed">${DAY_TEXT[qk]}</p>`;
+  if (S.has.radio) h += `<p class="mt-2 text-base rounded-xl p-2" style="background:#eef6ff">📻 라디오: “${RADIO_TIPS[(S.day - 1) % RADIO_TIPS.length]}”</p>`;
+  else h += `<p class="mt-2 text-base rounded-xl p-2" style="background:#f3f3f3">📵 전기가 끊겨 재난방송을 들을 수 없어요. (라디오가 없어요)</p>`;
+  if (S.dropNote) h += `<p class="mt-2 text-base rounded-xl p-2 pop" style="background:#fff0d6">${S.dropNote}</p>`;
+  if (DROP_DAYS.includes(S.day) && !S.crateDone) h += `<div class="mt-3 text-center"><button class="btn px-5 py-2 text-lg bg-white" data-act="crate">📦 구호물자 더 받기 도전! <span class="text-sm">(8초 미니게임)</span></button></div>`;
+  const E = S.evt;
+  if (E) {
+    h += `<div class="mt-4 rounded-2xl p-4" style="background:#fff8e0;border:3px solid var(--amber)">`;
+    if (!E.done) {
+      const c = E.cur;
+      h += `<div class="text-lg">${c.emoji} <b>오늘의 사건</b></div><p class="mt-1 text-base leading-relaxed">${c.text}</p>
+        <div class="mt-2 space-y-2">${c.choices.map((x, i) => (!x.cond || x.cond()) ? `<button class="choice w-full p-3 text-base" data-act="ev" data-i="${i}">${x.t}</button>` : '').join('')}</div>`;
+    } else {
+      h += `<div class="text-lg">${E.cur.emoji} <b>오늘의 사건 · 결과</b></div><p class="mt-1 text-base leading-relaxed pop" style="color:var(--navy)">👉 ${E.result}</p>`;
+    }
+    h += '</div>';
+  }
+  const lastDay = S.day === S.N;
+  const ready = !E || E.done;
+  h += `<div class="text-center mt-4"><button class="btn px-8 py-3 text-xl text-white" style="background:var(--navy)" data-act="toquiz" ${ready ? '' : 'disabled'}>📝 오늘의 방재 퀴즈 ▶</button></div>`;
+  return h;
+}
+
+/* ---------- 퀴즈 ---------- */
+function startQuizTimer() {
+  S.qStart = S.qStart || Date.now();
+  quizTimer = setInterval(() => {
+    const el = $('qbar'); if (!el) { clearInterval(quizTimer); return; }
+    const t = (Date.now() - S.qStart) / 1000;
+    el.style.width = Math.max(0, 100 - t / 10 * 100) + '%';
+    el.style.background = t < 10 ? '#2e9b4a' : '#bbb';
+    $('qsec').textContent = t < 10 ? Math.ceil(10 - t) + '초' : '⭐ 놓쳤어요';
+  }, 150);
+}
+function quizHTML() {
+  const q = S.quiz, d = q.def;
+  if (!S.quizInit) { if (d.setup) d.setup(); S.quizInit = true; renderFam(); }
+  let h = `<div class="flex items-center justify-between gap-2"><span class="px-3 py-1 rounded-full text-sm" style="background:#dff0ff;border:2px solid var(--navy)">${d.place}</span>
+      ${S.quizRes ? '' : '<span class="text-sm">⚡ 10초 안에 맞히면 <b>⭐ 번개 정답!</b> <b id="qsec"></b></span>'}</div>
+    ${S.quizRes ? '' : '<div class="bar mt-2" style="height:8px"><div id="qbar" style="width:100%;background:#2e9b4a;transition:none"></div></div>'}
+    <div class="mt-3 flex gap-3 items-start"><div class="text-5xl">${d.emoji}</div>
+    <div><h3 class="text-xl sm:text-2xl" style="color:var(--navy)">${d.title}</h3><p class="mt-1 text-base sm:text-lg leading-relaxed">${d.text}</p></div></div>
+    <div class="mt-4 space-y-2">${q.choices.map((c, i) => {
+      let cls = '';
+      if (S.quizRes) { if (c.ok) cls = 'right'; else if (i === S.quizRes.pick) cls = 'wrong'; }
+      return `<button class="choice w-full p-3 sm:p-4 text-base sm:text-lg ${cls}" data-act="ans" data-i="${i}" ${S.quizRes ? 'disabled' : ''}>${c.t}</button>`;
+    }).join('')}</div>`;
+  if (S.quizRes) {
+    const r = S.quizRes, last = S.day === S.N;
+    h += `<div class="mt-4 rounded-2xl p-4 pop" style="background:${r.ok ? '#e4f7e1' : '#ffe9e6'};border:3px solid ${r.ok ? 'var(--leaf)' : 'var(--alert)'}">
+      <div class="text-xl">${r.ok ? (r.fast ? '⚡⭐ 번개 정답!' : '🎉 정답!') : '😵 앗, 아니에요!'}</div>
+      <p class="mt-1 text-base leading-relaxed">${r.ok ? r.why : r.why + '<br><b>👉 올바른 행동:</b> ' + q.choices.find(c => c.ok).why}</p>
+      <p class="mt-2 text-base">${r.note}</p>
+      ${r.combo ? `<p class="mt-2 text-base">🔥 <b>${S.streak}연속 정답!</b> 보너스로 가족 에너지 +5</p>` : ''}
+      <p class="mt-2 text-sm text-slate-500">📖 ${d.ref}</p></div>
+      <div class="text-center mt-4"><button class="btn px-8 py-3 text-xl text-white" style="background:var(--navy)" data-act="afterquiz">${last ? '🚌 대피 완료! 결과 보기' : '🌅 오늘의 행동하기 ▶'}</button></div>`;
+  }
+  return h;
+}
+
+/* ---------- 오늘의 행동 ---------- */
+const totalFood = () => S.stock.fresh + S.stock.staple + S.stock.snack;
+const stockText = () => `(남은 💧 ${S.stock.water} · 🥫 ${S.stock.staple}${S.stock.fresh ? ` · 🍞 ${S.stock.fresh}` : ''}${S.stock.snack ? ` · 🍪 ${S.stock.snack}` : ''})`;
+function manageHTML() {
+  let h = `<h3 class="text-2xl" style="color:var(--navy)">🌅 ${S.day}일차 · 오늘의 행동</h3>`;
+  if (S.msg) h += `<div class="rounded-2xl p-3 my-3 pop" style="background:#fff3bf;border:3px solid var(--amber)">${S.msg}</div>`;
+
+  const needW = S.fam.filter(m => !m.gotW).length, needF = S.fam.filter(m => !m.gotF).length;
+  h += `<div class="mt-3"><b>🥤🥫 물·식량 나눠주기</b> <span class="text-sm text-slate-600">(1인당 하루 한 번, 게이지가 낮은 가족부터!)</span>
+    <div class="rounded-xl p-2 mt-2 text-base" style="background:#eef6ff">📦 <b>남은 물자</b> — 💧 물 <b>${S.stock.water}</b>개 · 🥫 식량 <b>${S.stock.staple}</b>개${S.stock.fresh ? ` · 🍞 상하기 쉬운 음식 <b>${S.stock.fresh}</b>개` : ''}${S.stock.snack ? ` · 🍪 간식 <b>${S.stock.snack}</b>개` : ''}<br><span class="text-sm text-slate-600">오늘 아직 못 받은 가족: 💧 물 ${needW}명 · 🍚 식량 ${needF}명</span></div>
+    ${S.stock.fresh ? '<p class="text-sm" style="color:var(--alert)">🍞 상하기 쉬운 음식은 상하기 전에 먼저 먹어요!</p>' : ''}
+    <div class="flex flex-wrap gap-2 mt-2">
+      <button class="btn px-3 py-1 text-sm bg-white" data-act="giveall" data-t="w" ${needW && S.stock.water > 0 ? '' : 'disabled'}>💧 모두에게 물</button>
+      <button class="btn px-3 py-1 text-sm bg-white" data-act="giveall" data-t="f" ${needF && totalFood() > 0 ? '' : 'disabled'}>🍚 모두에게 식량</button>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">${S.fam.map(m => {
+      const hs = hydState(m.hyd), ss = satState(m.sat);
+      return `<div class="rounded-xl p-2" style="background:#f3f6ff">${m.emoji} <b>${m.name}</b>
+        <div class="text-xs"><span style="color:${hs.c}">${hs.t}</span> · <span style="color:${ss.c}">${ss.t}</span></div>
+        <div class="flex gap-1 mt-1">
+          <button class="btn flex-1 py-1 text-sm bg-white" data-act="give" data-id="${m.id}" data-t="w" ${m.gotW || S.stock.water <= 0 ? 'disabled' : ''}>${m.gotW ? '💧 ✔' : '💧 물'}</button>
+          <button class="btn flex-1 py-1 text-sm bg-white" data-act="give" data-id="${m.id}" data-t="f" ${m.gotF || totalFood() <= 0 ? 'disabled' : ''}>${m.gotF ? '🍚 ✔' : '🍚 식량'}</button>
+        </div></div>`; }).join('')}</div></div>`;
+
+  h += `<div class="mt-5"><b>🩺 건강 관리</b>
+    <p class="text-sm mt-1 rounded-xl p-2" style="background:#e9f7ff">💊 <b>갑상샘 방호 약품은 방송에서 “먹으라”고 지시할 때만!</b> 미리 먹으면 효과가 사라지고, 너무 늦게 먹어도 소용없어요.</p>
+    <div class="space-y-2 mt-2">${S.fam.map(m => `
+      <div class="rounded-xl p-2 flex flex-wrap items-center gap-2" style="background:#f7f7f7">
+        <span class="w-20">${m.emoji} <b>${m.name}</b></span>
+        <span class="flex-1 min-w-[120px]">${healthBadge(m)}${m.pill ? ` <span class="text-xs">${PILL_LABEL[m.pill]}</span>` : ''}</span>
+        ${m.contam ? `<button class="btn px-3 py-1 text-sm bg-white" data-act="soap" data-id="${m.id}" ${S.uses.soap > 0 ? '' : 'disabled'}>🧼 씻기${S.uses.soap > 0 ? '' : '(없음)'}</button>` : ''}
+        ${(m.hurt || m.sick) ? `<button class="btn px-3 py-1 text-sm bg-white" data-act="kit" data-id="${m.id}" ${S.uses.kit > 0 ? '' : 'disabled'}>🩹 치료${S.uses.kit > 0 ? '' : '(없음)'}</button>` : ''}
+        ${!m.pill ? `<button class="btn px-3 py-1 text-sm bg-white" data-act="pill" data-id="${m.id}" ${S.pillDoses > 0 ? '' : 'disabled'}>💊 약 먹이기${S.pillDoses > 0 ? '' : '(없음)'}</button>` : ''}
+        ${m.thy ? '<span class="text-xs text-slate-600 w-full">⚕️ 병에 걸린 채로 지내지만 괜찮아요. 구호소 의료지원에서 검진받을 수 있어요.</span>' : ''}
+        ${m.sick ? '<span class="text-xs w-full" style="color:var(--alert)">🤒 오염이 오래가서 병들었어요! 🩹 구급상자로 치료해요. 치료하지 못하면 구조된 뒤 곧바로 병원에 가야 해요.</span>' : ''}
+        ${m.contam && !m.sick ? '<span class="text-xs w-full" style="color:var(--alert)">⚠️ 오염 상태가 3일 이어지면 병들어요! 서둘러 🧼 씻겨요.</span>' : ''}
+        ${m.hurt && !m.sick && S.uses.kit <= 0 ? '<span class="text-xs text-slate-600 w-full">🤕 구급상자가 없어도 며칠 쉬면 나아져요.</span>' : ''}
+      </div>`).join('')}</div></div>`;
+
+  const low = S.fam.some(m => m.ene < 35);
+  h += `<div class="mt-5"><b>⚡ 에너지 충전 놀이</b> ${low ? '<span class="text-sm" style="color:var(--alert)">에너지가 낮은 가족이 있어요! 놀이로 충전해요 😴→😆</span>' : ''}
+    <div class="flex flex-wrap gap-2 mt-2">
+      <button class="btn px-3 py-2 text-base bg-white" data-act="play-card" ${S.has.cards && !S.cardToday ? '' : 'disabled'}>🃏 카드 짝 맞추기 ${S.has.cards ? (S.cardToday ? '(오늘 완료)' : '(하루 1번)') : '(카드 없음)'}</button>
+      <button class="btn px-3 py-2 text-base bg-white" data-act="play-chess" ${S.has.chess && !S.chessToday ? '' : 'disabled'}>♟️ 체스 한 판 ${S.has.chess ? (S.chessToday ? '(오늘 완료)' : '(하루 1번)') : '(체스판 없음)'}</button>
+      <button class="btn px-3 py-2 text-base bg-white" data-act="play-game" ${S.uses.game > 0 ? '' : 'disabled'}>🎮 게임기 연타 ${S.uses.game > 0 ? `(남은 ${S.uses.game}회)` : '(게임기 없음)'}</button>
+      <button class="btn px-3 py-2 text-base bg-white" data-act="play-talk" ${S.talkToday ? 'disabled' : ''}>🗣️ 끝말잇기 ${S.talkToday ? '(오늘 완료)' : '(+8)'}</button>
+    </div></div>`;
+
+  h += `<div class="mt-5"><b>🧭 탐험 보내기</b> <span class="text-sm text-slate-600">(하루 1번 · 3일차부터 · 갈증·굶주림·병든 가족은 못 가요)</span>
+    <p class="text-sm mt-1 rounded-xl p-2" style="background:#ffe9e6">⚠️ 야외는 위험해요! 물자를 구할 수 있지만 <b>방독면·마스크 없이 나가면 오염</b>될 수 있어요. 꼭 필요할 때만!</p>
+    <div class="mt-2"><button class="btn px-4 py-2 text-base bg-white" data-act="expedition" ${S.day >= 3 && !S.expToday && S.fam.some(m => !expBlock(m)) ? '' : 'disabled'}>🧭 가족 한 명을 탐험 보내기 ${S.expToday ? '(오늘 완료)' : ''}</button></div></div>`;
+
+  h += `<div class="text-center mt-6"><button class="btn px-8 py-3 text-xl text-white" style="background:var(--navy)" data-act="endday">🌙 하루 마치기</button></div>`;
+  return h;
+}
+function nightHTML() {
+  return `<h3 class="text-2xl" style="color:var(--navy)">🌙 ${S.day}일차 밤</h3>
+    <ul class="mt-3 space-y-2 text-base">${S.nightLines.map(l => `<li class="rounded-xl p-2" style="background:#f3f6ff">${l}</li>`).join('')}</ul>
+    <div class="text-center mt-5"><button class="btn px-8 py-3 text-xl text-white" style="background:var(--navy)" data-act="nextday">☀️ ${S.day + 1}일차 아침으로 ▶</button></div>`;
+}
+
+/* ---------- 행동 처리 ---------- */
+$('screen-p2').addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
+  const act = b.dataset.act, id = b.dataset.id;
+  if (act === 'ev') {
+    const E = S.evt, c = E.cur.choices[+b.dataset.i];
+    const r = c.fn(E);
+    if (typeof r === 'string') finishEvt(r);
+    else if (r && r.next) { E.cur = r.next; renderStage(); }
+  } else if (act === 'crate') openCrateGame();
+  else if (act === 'toquiz') { S.stage = 'quiz'; S.qStart = Date.now(); S.msg = ''; renderStage(); renderFam(); }
+  else if (act === 'ans') answerQuiz(+b.dataset.i);
+  else if (act === 'afterquiz') { if (S.day === S.N) endGame(); else { S.stage = 'manage'; S.msg = ''; renderAll(); } }
+  else if (act === 'give') giveSupply(id, b.dataset.t, true);
+  else if (act === 'giveall') giveAll(b.dataset.t);
+  else if (act === 'soap') {
+    const m = member(id);
+    if (S.uses.soap > 0 && m.contam) {
+      S.uses.soap--; m.contam = false;
+      S.msg = `🧼 ${m.emoji}${m.name}이(가) 비누·샴푸로 깨끗이 씻었어요. <b>치료 완료!</b>`;
+      addLog(`${m.name}은(는) 비누와 샴푸로 오염을 깨끗이 씻어 냈습니다.`);
+    }
+    renderAll();
+  } else if (act === 'kit') {
+    const m = member(id);
+    if (S.uses.kit > 0 && m.sick) { S.uses.kit--; m.sick = false; S.msg = `🩹 ${m.emoji}${m.name}의 병을 구급상자로 치료했어요. <b>치료 완료!</b>`; addLog(`병들었던 ${m.name}은(는) 구급상자의 도움으로 기운을 되찾았습니다.`); }
+    else if (S.uses.kit > 0 && m.hurt) { S.uses.kit--; m.hurt = false; m.hurtDays = 0; S.msg = `🩹 ${m.emoji}${m.name}의 상처를 구급상자로 치료했어요. <b>치료 완료!</b>`; addLog(`${m.name}의 상처는 구급상자 덕분에 금세 나았습니다.`); }
+    renderAll();
+  } else if (act === 'pill') manualPill(id);
+  else if (act === 'play-card') openCardGame();
+  else if (act === 'play-game') openConsoleGame();
+  else if (act === 'play-chess') {
+    S.chessToday = true; allEne(15); S.plays++;
+    S.msg = '♟️ 가족이 돌아가며 체스를 뒀어요. 누가 이겼을까요? 모두 웃었어요! (가족 에너지 +15)';
+    addLog('전기가 없는 밤, 가족은 체스판 앞에 둘러앉아 오랜만에 웃었습니다.');
+    renderAll();
+  } else if (act === 'play-talk') {
+    S.talkToday = true; allEne(8); S.plays++;
+    S.msg = '🗣️ 온 가족이 끝말잇기를 하며 깔깔 웃었어요! (가족 에너지 +8)';
+    renderAll();
+  } else if (act === 'expedition') openExpedition();
+  else if (act === 'endday') { S.msg = ''; endDay(); }
+  else if (act === 'nextday') startDay(false);
+});
+
+function giveSupply(id, type, render) {
+  const m = member(id);
+  if (type === 'w') {
+    if (S.stock.water <= 0 || m.gotW) return false;
+    S.stock.water--; m.hyd = clamp(m.hyd + 45, 0, 100); m.gotW = true;
+    S.msg = `💧 ${m.emoji}${m.name}에게 물을 줬어요! 수분이 채워졌어요.`;
+  } else {
+    if (m.gotF) return false;
+    if (S.stock.fresh > 0) { S.stock.fresh--; m.sat = clamp(m.sat + 40, 0, 100); m.gotF = true; S.msg = `🍞 ${m.emoji}${m.name}이(가) 상하기 쉬운 음식을 먼저 먹었어요. 잘했어요!`; }
+    else if (S.stock.staple > 0) { S.stock.staple--; m.sat = clamp(m.sat + 40, 0, 100); m.gotF = true; S.msg = `🥫 ${m.emoji}${m.name}이(가) 든든하게 먹었어요! 배가 불러요.`; }
+    else if (S.stock.snack > 0) { S.stock.snack--; m.sat = clamp(m.sat + 15, 0, 100); m.gotF = true; S.msg = `🍪 ${m.emoji}${m.name}이(가) 간식을 먹었지만, 금방 또 배고플 거예요…`; }
+    else return false;
+  }
+  S.msg += ' ' + stockText();
+  if (render) renderAll();
+  return true;
+}
+function giveAll(type) {
+  const order = S.fam.slice().sort((a, b) => type === 'w' ? a.hyd - b.hyd : a.sat - b.sat);
+  let n = 0; order.forEach(m => { if (giveSupply(m.id, type, false)) n++; });
+  S.msg = (type === 'w' ? `💧 가족 ${n}명에게 물을 나눠 줬어요!` : `🍚 가족 ${n}명에게 식량을 나눠 줬어요!`) + ' ' + stockText();
+  renderAll();
+}
+
+function answerQuiz(i) {
+  if (S.quizRes) return;
+  const q = S.quiz, c = q.choices[i];
+  const elapsed = (Date.now() - S.qStart) / 1000;
+  S.quizTotal++;
+  let fast = false, combo = false;
+  if (c.ok) {
+    S.quizCorrect++; S.streak++;
+    if (elapsed <= 10) { fast = true; S.stars++; }
+    if (S.streak % 3 === 0) { combo = true; allEne(5); }
+  } else {
+    S.streak = 0;
+    S.wrongs.push({ title:q.def.title, chosen:c.t, right:q.choices.find(x => x.ok).why, ref:q.def.ref });
+  }
+  const note = q.def.after(c.ok);
+  S.quizRes = { pick:i, ok:c.ok, why:c.why, note, fast, combo };
+  renderAll();
+}
+
+function manualPill(id) {
+  const m = member(id);
+  if (S.pillDoses <= 0 || m.pill) return;
+  S.pillDoses--;
+  if (!S.instructionDone) {
+    m.pill = 'early';
+    S.msg = `😱 앗! 아직 <b>복용 지시</b>가 없었어요. 약을 미리 먹으면 정작 필요할 때 효과가 없어요. ${m.emoji}${m.name}의 약은 낭비됐어요.<br>👉 방송에서 “먹으라”고 할 때까지 기다려야 해요!`;
+    addLog(`불안한 마음에 지시가 나오기도 전에 ${m.name}에게 약을 먹이고 말았습니다. 약은 지시에 따라, 제때 먹어야 하는데 말이에요.`);
+  } else {
+    m.pill = 'late';
+    S.msg = '⏰ 지시 시점이 이미 지나서 효과가 거의 없어요. 약은 지시가 나온 <b>바로 그때</b> 먹어야 해요.';
+  }
+  renderAll();
+}
+
+/* =====================================================================
+ *  오늘의 사건 (60 Seconds 스타일)
+ * ===================================================================== */
+function finishEvt(text) { S.evt.done = true; S.evt.result = text; renderAll(); }
+function hurtSomeone() { const m = shuffle(S.fam.filter(x => !x.hurt))[0] || S.fam[0]; m.hurt = true; m.hurtDays = 0; return m; }
+function robbedResult() {
+  const w = Math.floor(S.stock.water / 2), s = Math.floor(S.stock.staple / 2);
+  S.stock.water -= w; S.stock.staple -= s; S.robbed = true;
+  const m = hurtSomeone(); allEne(-8);
+  addLog(`문을 열자마자 강도들이 들이닥쳐 물과 식량을 빼앗아 갔고, ${m.name}이(가) 다쳤습니다.`);
+  return `😱 강도였어요! 💧 물 ${w}개, 🥫 식량 ${s}개를 빼앗기고 ${m.emoji}${m.name}이(가) 다쳤어요. (가족 에너지 −8)<br>💡 정체를 모르는 사람, 특히 위협적인 목소리에는 문을 열지 않아요!`;
+}
+const ignoreDoor = (msg, de = 0) => () => { S.doors++; if (de) allEne(de); return msg; };
+
+const EVTS = {
+  cry: { start:() => ({ emoji:'😢', text:'사이렌 소리가 무서웠는지 둘째가 울음을 터뜨렸어요.', choices:[
+    { t:'🧸 곰인형을 꼭 안겨 준다', cond:() => S.has.bear, fn:() => { ene('second', 35); allEne(2); addLog('울음을 터뜨린 둘째에게 곰인형을 안겨 주자, 아이는 금세 숨을 고르고 웃었습니다.'); return '곰인형 덕분에 둘째가 금방 진정했어요! (둘째 에너지 +35)'; } },
+    { t:'🤗 꼭 안아 주며 이야기를 들어준다', fn:() => { ene('second', 25); allEne(2); addLog('무서워 우는 둘째를 당신은 꼭 안아 주며 “우리가 함께 있으니 괜찮아”라고 속삭였습니다.'); return '둘째의 마음이 한결 편해졌어요. (둘째 에너지 +25)'; } },
+    { t:'🙈 “참아야지”라고만 말한다', fn:() => { ene('second', -20); return '둘째가 더 불안해졌어요. (둘째 에너지 −20)'; } },
+  ] }) },
+  bored: { start:() => ({ emoji:'🥱', text:'첫째가 “너무 심심해요!”라며 뒹굴고 있어요.', choices:[
+    { t:'🃏 카드놀이를 같이 한다', cond:() => S.has.cards, fn:() => { ene('first', 22); allEne(3); return '카드놀이로 첫째의 에너지가 올랐어요! (첫째 +22, 가족 +3)'; } },
+    { t:'🎮 게임기를 잠깐 쓰게 해 준다', cond:() => S.uses.game > 0, fn:() => { S.uses.game--; ene('first', 25); return '첫째가 신나게 놀았어요! (게임기 −1회, 첫째 에너지 +25)'; } },
+    { t:'🗣️ 끝말잇기를 같이 한다', fn:() => { ene('first', 12); allEne(3); addLog('전기가 없어도 가족은 끝말잇기를 하며 웃음을 잃지 않았습니다.'); return '온 가족이 끝말잇기를 하며 웃었어요. (첫째 +12, 가족 +3)'; } },
+  ] }) },
+  rumor: { start:() => ({ emoji:'💬', text:'이웃 단톡방에 “이제 밖에 나가도 안전하대요!”라는 글이 올라왔어요. 출처는 알 수 없어요.', choices:[
+    { t:'😲 정말이구나! 첫째를 잠깐 내보낸다', fn:() => { S.fam[2].contam = true; ene('first', -5); addLog('출처 모를 소문을 믿고 첫째를 밖에 내보냈다가 오염되고 말았습니다.'); return '소문은 가짜였어요! 🧒 첫째가 오염됐어요. 🧼 씻겨 줘야 해요.'; } },
+    { t:'📻 공식 재난방송으로 먼저 확인한다', fn:() => { allEne(3); return '재난방송에서는 “아직 야외 활동 금지”라고 했어요. 소문에 속지 않았어요! (가족 에너지 +3)'; } },
+  ] }) },
+  dark: { start:() => ({ emoji:'🌙', text:'긴 정전이 이어지는 밤. 사방이 깜깜해요.', choices:[
+    { t:'👀 상황을 살펴본다', fn:() => { if (S.has.radio) { allEne(5); return '🔦 랜턴 덕분에 어둠이 무섭지 않아요. 📻 라디오에서는 작은 목소리가 흘러나와요. (가족 에너지 +5)'; } allEne(-8); addLog('캄캄한 밤, 불빛 하나 없이 가족은 서로의 손만 꼭 잡고 버텼습니다.'); return '랜턴이 없어 너무 어둡고 무서워요. (가족 에너지 −8)'; } },
+  ] }) },
+  blind: { start:() => ({ emoji:'📵', text:'라디오가 없어 바깥 소식을 전혀 알 수 없어요. 구조대가 오는지, 방송이 나오는지 가족 모두 불안해해요…', choices:[
+    { t:'😟 그래도 기다려 본다', fn:() => { allEne(-4); addLog('소식을 들을 라디오가 없어 가족은 하루 종일 불안해했습니다.'); return '정보가 없으니 더 불안해요. 📻 라디오의 소중함을 느꼈어요. (가족 에너지 −4)'; } },
+  ] }) },
+
+  /* ---- 🚪 쾅! 쾅! 문 두드리는 소리 ---- */
+  merchant: { start:() => ({ emoji:'🚪', text:'<b>쾅! 쾅!</b> 누군가 대피소 문을 두드려요. “여보세요~ 좋은 물건이 있어요~ 거래하실래요?” 장사꾼 같은 목소리예요.', choices:[
+    { t:'🚪 문을 연다', fn:() => ({ next:{ emoji:'🧳', text:'등에 짐을 가득 진 상인이 활짝 웃어요. “물 한 병과 통조림 두 개를 바꾸시겠어요? 아니면 <b>카드 대결</b> 한 판 어때요? 이기면 식량을 듬뿍, 지면 약(없으면 물)을 가져갈게요!”', choices:[
+      { t:'💧 물 1개 ↔ 🥫 통조림 2개 바꾸기', cond:() => S.stock.water >= 1, fn:() => { S.stock.water--; S.stock.staple += 2; S.doors++; addLog('문을 두드린 상인과 물 한 병을 통조림 두 개로 바꾸었습니다.'); return '공정한 거래! 💧 −1, 🥫 +2'; } },
+      { t:'🃏 카드 대결! (이기면 식량 +4 / 지면 약 1개 또는 물 2개를 잃어요)', fn:() => { S.doors++; openDuel(win => {
+          if (win) { S.stock.staple += 4; allEne(5); addLog('상인과의 카드 대결에서 이겨 식량을 한가득 얻었습니다.'); finishEvt('🎉 대결에서 이겼어요! 🥫 식량 +4, 가족 에너지 +5'); }
+          else if (S.pillDoses > 0) { S.pillDoses--; addLog('상인과의 카드 대결에서 져서 약을 하나 잃고 말았습니다.'); finishEvt('😢 대결에서 졌어요… 상인이 💊 약 1개를 가져갔어요.'); }
+          else { const w = Math.min(2, S.stock.water); S.stock.water -= w; finishEvt(`😢 대결에서 졌어요… 상인이 💧 물 ${w}개를 가져갔어요.`); }
+        }); return null; } },
+      { t:'🚫 정중히 거절한다', fn:() => { S.doors++; return '“그럼 다음에!” 상인은 씩씩하게 떠났어요.'; } },
+    ] } }) },
+    { t:'🙈 무시한다', fn:ignoreDoor('문 두드리는 소리는 곧 멈췄어요. 아무 일도 일어나지 않았어요.') },
+  ] }) },
+
+  robber: { start:() => ({ emoji:'🚪', text:'<b>쾅쾅쾅!!</b> “빨리 문 열어! 안 열면 부술 거야!” 거칠고 위협적인 목소리가 들려요.', choices:[
+    { t:'🚪 문을 연다', fn:() => {
+        S.doors++;
+        if (S.uses.ext > 0) return { next:{ emoji:'😈', text:'문이 열리자마자 험악한 사람들이 밀고 들어오려 해요! 손에 쥔 🧯 소화기가 눈에 들어와요!', choices:[
+          { t:'🧯 소화기를 힘껏 뿌려 쫓아낸다', fn:() => { S.uses.ext--; allEne(6); addLog('강도들이 들이닥쳤지만 당신은 소화기를 뿌려 침입자들을 쫓아냈습니다.'); return '🧯 하얀 가루가 확 퍼지자 강도들이 도망쳤어요! (소화기 −1회, 가족 에너지 +6)<br>💡 그래도 모르는 사람에게 문을 여는 건 위험해요.'; } },
+          { t:'🙇 순순히 물건을 내준다', fn:() => robbedResult() },
+        ] } };
+        return robbedResult();
+      } },
+    { t:'🙈 문을 열지 않고 조용히 숨죽인다', fn:ignoreDoor('쾅쾅 소리는 한참 이어지다가 멈췄어요. 문을 열지 않은 건 현명한 선택이었어요! (가족 에너지 +3)', 3) },
+  ] }) },
+
+  rescue: { start:() => { const fake = Math.random() < 0.5; return { emoji:'🚪', text:'<b>쾅쾅!</b> “구조대입니다! 문을 열어 주세요!” 군복 같은 옷을 입은 사람들의 목소리가 들려요.', choices:[
+    { t:'🚪 문을 연다', fn:() => { S.doors++; return { next:{ emoji:'🪖', text:'“저희는 구조대입니다. 신원을 확인하셔도 좋고요. 아, 확인을 위해 📻 라디오를 잠깐 빌려 주시겠어요?” 어떻게 할까요?', choices:[
+      { t:'📋 “신분증과 공식 재난방송 안내를 확인해 볼게요”', fn:() => {
+          if (fake) { allEne(6); addLog('구조대를 자칭한 사람들은 신분증을 요구하자 슬그머니 사라졌습니다. 가짜였던 모양입니다.'); return '🕵️ 신분증을 보여 달라고 하자 우물쭈물하다 도망쳤어요. <b>가짜 구조대</b>를 알아챘어요! (가족 에너지 +6)'; }
+          S.stock.water += 4; S.stock.staple += 4; allEne(10); addLog('진짜 구조대가 찾아와 신분과 공식 안내를 확인한 뒤 구호물자를 전해 주었습니다.');
+          return '✅ 신분증과 공식 안내가 일치하는 <b>진짜 구조대</b>였어요! 💧 +4, 🥫 +4, 가족 에너지 +10'; } },
+      { t:'📻 요구한 대로 라디오를 건네준다', cond:() => S.has.radio, fn:() => {
+          if (fake) { S.has.radio = false; S.scammed = true; allEne(-8); addLog('구조대를 자칭한 사람들에게 라디오를 건넸다가 그대로 빼앗기고 말았습니다.'); return '😱 가짜였어요! 📻 라디오를 빼앗겼어요. (가족 에너지 −8)<br>💡 “확인용”이라며 물건을 요구하는 사람은 먼저 의심해요!'; }
+          S.stock.water += 2; S.stock.staple += 2; addLog('진짜 구조대는 라디오 채널만 확인하고 돌려준 뒤 약간의 물자를 남기고 떠났습니다.'); return '다행히 진짜 구조대였어요. 채널만 확인하고 돌려줬어요. 💧 +2, 🥫 +2<br>💡 하지만 물건을 맡기기 전에 신원부터 확인하는 게 안전해요!'; } },
+      { t:'🙏 “구조대시군요! 다 믿고 맡길게요”', fn:() => {
+          if (fake) { const w = Math.floor(S.stock.water * 0.3), s = Math.floor(S.stock.staple * 0.3); S.stock.water -= w; S.stock.staple -= s; S.scammed = true; allEne(-8); addLog('구조대를 믿고 문을 활짝 열었지만, 그들은 물자를 챙겨 사라졌습니다.'); return `😱 가짜였어요! 💧 ${w}개, 🥫 ${s}개를 속아서 빼앗겼어요. (가족 에너지 −8)<br>💡 구조대라고 해도 신원과 공식 안내를 먼저 확인해요!`; }
+          S.stock.water += 2; S.stock.staple += 2; return '다행히 진짜 구조대였어요! 💧 +2, 🥫 +2<br>💡 그래도 확인은 꼭 해야 해요.'; } },
+    ] } }; } },
+    { t:'🙈 문을 열지 않는다', fn:() => { S.doors++; if (!fake) allEne(-2); return fake ? '나중에 들으니 가짜 구조대가 돌아다녔대요. 문을 열지 않아 안전했어요!' : '혹시 진짜 구조대였을까요? 구조의 기회를 놓쳤을지도 몰라요. (가족 에너지 −2)'; } },
+  ] }; } },
+
+  neighbor: { start:() => ({ emoji:'🚪', text:'<b>똑… 똑…</b> “제발… 먹을 것 좀 나눠 주세요…” 힘없는 이웃의 목소리가 들려요.', choices:[
+    { t:'🚪 문을 연다', fn:() => { S.doors++; return { next:{ emoji:'🥺', text:'며칠을 굶은 듯한 이웃이 서 있어요. “통조림 하나만… 아니면 물이라도…”', choices:[
+      { t:'🥫 통조림 2개를 나눠 준다', cond:() => S.stock.staple >= 2, fn:() => { S.stock.staple -= 2; allEne(8); if (S.day + 2 <= S.N) S.gifts.push({ day:S.day + 2, text:'🎁 이웃이 지난번 도움에 보답하러 왔어요! 💧 +3 · 🥫 +4 · 가족 에너지 +8', apply:() => { S.stock.water += 3; S.stock.staple += 4; allEne(8); addLog('며칠 전 도와준 이웃이 큰 선물을 들고 찾아와 눈물로 고마워했습니다.'); } }); addLog('굶주린 이웃에게 통조림을 나눠 주었습니다.'); return '이웃이 눈물을 글썽이며 고마워했어요. (🥫 −2, 가족 에너지 +8) 🎁 나중에 보답이 올지도 몰라요!'; } },
+      { t:'💧 물 2개를 나눠 준다', cond:() => S.stock.water >= 2, fn:() => { S.stock.water -= 2; allEne(8); if (S.day + 2 <= S.N) S.gifts.push({ day:S.day + 2, text:'🎁 이웃이 지난번 도움에 보답하러 왔어요! 💧 +3 · 🥫 +4 · 가족 에너지 +8', apply:() => { S.stock.water += 3; S.stock.staple += 4; allEne(8); addLog('며칠 전 도와준 이웃이 큰 선물을 들고 찾아와 눈물로 고마워했습니다.'); } }); addLog('목마른 이웃에게 물을 나눠 주었습니다.'); return '이웃이 꿀꺽꿀꺽 물을 마시며 고마워했어요. (💧 −2, 가족 에너지 +8) 🎁 나중에 보답이 올지도 몰라요!'; } },
+      { t:'🚫 미안하지만 우리도 부족하다고 말한다', fn:() => { allEne(-3); return '이웃은 고개를 숙이고 돌아갔어요. 마음이 무거워요. (가족 에너지 −3)'; } },
+    ] } }; } },
+    { t:'🙈 무시한다', fn:() => { S.doors++; allEne(-4); return '소리가 한참 이어지다 멈췄어요. 마음이 편치 않아요. (가족 에너지 −4)'; } },
+  ] }) },
+
+  /* ---- 🪳 대피소 내부 문제 ---- */
+  bug: { start:() => ({ emoji:'🪳', text:'대피소 구석에서 <b>방사능에 변이한 바퀴벌레와 거미</b>가 우글우글 나타났어요! 방치하면 가족이 다치거나 이상한 헛것을 볼 수도 있어요.', choices:[
+    { t:'🧴 살충제를 뿌린다', cond:() => S.uses.insect > 0, fn:() => { S.uses.insect--; S.bugSolved = true; allEne(3); addLog('대피소 구석에 벌레가 득실거렸지만 살충제를 뿌려 말끔히 퇴치했습니다.'); return '🧴 슈우욱! 벌레들이 사라졌어요. (살충제 −1회, 가족 에너지 +3)'; } },
+    { t:'🧯 소화기를 뿌려 쫓아낸다', cond:() => S.uses.ext > 0, fn:() => { S.uses.ext--; S.bugSolved = true; allEne(3); addLog('소화기를 뿌려 벌레 떼를 겨우 쫓아냈습니다.'); return '🧯 하얀 가루에 벌레들이 도망쳤어요! (소화기 −1회, 가족 에너지 +3)'; } },
+    { t:'📘 생존 안내서의 퇴치법을 따라 한다', cond:() => S.has.guide, fn:() => { S.bugSolved = true; allEne(4); addLog('생존 안내서에 적힌 대로 벌레 퇴치법을 따라 해 문제를 해결했습니다.'); return '📘 “벌레는 음식물부터 치워라!” 안내서대로 했더니 벌레가 사라졌어요. (가족 에너지 +4)'; } },
+    { t:'👟 슬리퍼로 직접 때려잡는다', fn:() => { if (Math.random() < 0.5) { S.bugSolved = true; return '👟 탁! 탁! 간신히 모두 잡았어요. 휴…'; } const m = hurtSomeone(); allEne(-4); return `👟 너무 많아서 실패! ${m.emoji}${m.name}이(가) 벌레에 물렸어요. (가족 에너지 −4)`; } },
+    { t:'🙈 모른 척한다', fn:() => { S.bugIgnored = true; const m = hurtSomeone(); allEne(-8); addLog(`벌레를 방치한 탓에 ${m.name}이(가) 벌레에 물려 열이 났고, 밤마다 헛것을 보았습니다.`); return `😱 벌레가 번졌어요! ${m.emoji}${m.name}이(가) 물려 아프고 헛것을 봐요. (가족 에너지 −8)<br>💡 🧴 살충제·🧯 소화기·📘 안내서를 챙기면 해결할 수 있어요!`; } },
+  ] }) },
+
+  pipe: { start:() => ({ emoji:'🔧', text:'<b>콸콸!</b> 대피소 파이프가 터져 물이 새고 있어요! 식량과 📻 라디오가 물에 젖을 위기예요!', choices:[
+    { t:'🧰 공구함으로 파이프를 수리한다', cond:() => S.has.toolbox, fn:() => { allEne(4); addLog('파이프가 터졌지만 공구함으로 재빨리 수리해 물자를 지켜 냈습니다.'); return '🧰 척척 수리 완료! 물자가 무사해요. (가족 에너지 +4)'; } },
+    { t:'🗺️ 지도에서 밸브 위치를 찾아 잠근다', cond:() => S.has.map, fn:() => { allEne(3); addLog('지도에서 배관 밸브를 찾아 물을 잠근 덕분에 큰 피해를 막았습니다.'); return '🗺️ 지도에 표시된 밸브를 돌려 물을 잠갔어요! (가족 에너지 +3)'; } },
+    { t:'🔦 랜턴으로 비추며 수건으로 틀어막는다', cond:() => S.has.radio, fn:() => { if (S.stock.water > 0) S.stock.water--; return '🔦 랜턴 불빛으로 새는 곳을 찾아 수건으로 막았어요. 물을 조금 잃었지만 괜찮아요. (💧 −1)'; } },
+    { t:'🙈 어떻게든 되겠지…', fn:() => { S.pipeFail = true; const s = Math.min(2, S.stock.staple), w = Math.min(2, S.stock.water); S.stock.staple -= s; S.stock.water -= w; let extra = ''; if (S.has.radio) { S.has.radio = false; extra = ' 📻 라디오가 물에 젖어 고장 났어요!'; } allEne(-6); addLog('파이프 누수를 방치한 탓에 식량이 젖고 라디오까지 고장 나 버렸습니다.'); return `😱 물이 번졌어요! 🥫 ${s}개, 💧 ${w}개가 못 쓰게 됐어요.${extra} (가족 에너지 −6)<br>💡 🧰 공구함이나 🗺️ 지도가 있으면 고칠 수 있어요!`; } },
+  ] }) },
+
+  nightmare: { start:() => { const m = shuffle(S.fam)[0]; return { emoji:'😵', text:`밤새 ${m.emoji}<b>${m.name}</b>이(가) 악몽을 꾸고 소리를 질러요. 환청이 들린다며 벽을 보고 떨고 있어요. 가족들도 날카로워져 말다툼이 일어날 것 같아요…`, choices:[
+    { t:'📻 라디오로 잔잔한 방송을 틀어 안심시킨다', cond:() => S.has.radio, fn:() => { ene(m.id, 30); allEne(3); addLog(`악몽을 꾼 ${m.name}에게 라디오의 잔잔한 목소리를 들려주자 금세 잠잠해졌습니다.`); return `📻 재난방송의 차분한 목소리에 ${m.name}이(가) 안심했어요. (${m.name} 에너지 +30, 가족 +3)`; } },
+    { t:'♟️ 체스판을 꺼내 같이 둔다', cond:() => S.has.chess, fn:() => { ene(m.id, 30); allEne(3); return `♟️ 체스를 두다 보니 ${m.name}의 환청이 사라졌어요. (${m.name} 에너지 +30, 가족 +3)`; } },
+    { t:'🃏 카드를 꺼내 같이 논다', cond:() => S.has.cards, fn:() => { ene(m.id, 28); allEne(3); return `🃏 카드놀이에 빠져 ${m.name}이(가) 웃음을 되찾았어요. (${m.name} 에너지 +28, 가족 +3)`; } },
+    { t:'🧸 곰인형을 안겨 준다', cond:() => S.has.bear, fn:() => { ene(m.id, 25); return `🧸 곰인형을 꼭 안고 ${m.name}이(가) 다시 잠들었어요. (${m.name} 에너지 +25)`; } },
+    { t:'🗣️ 곁에서 이야기를 들어준다', fn:() => { ene(m.id, 15); return `${m.name}의 손을 잡고 밤새 이야기를 들어줬어요. (${m.name} 에너지 +15)`; } },
+    { t:'😴 “그냥 자라”고 한다', fn:() => { allEne(-8); addLog(`악몽에 시달리는 ${m.name}을(를) 달래지 못해 가족 간에 말다툼이 일어났습니다.`); return '말다툼이 벌어졌어요… 모두 기분이 상했어요. (가족 에너지 −8)'; } },
+  ] }; } },
+
+  /* ---- 📻 라디오 & 외부 정보 ---- */
+  signal: { start:() => ({ emoji:'📡', text:'📻 채널을 돌리다 <b>정부·군의 긴급 방송</b>을 들었어요! “내일 특정 지역에서 소개(대피)를 실시합니다. 구조 헬기가 보이면 📻 라디오나 🔦 랜턴으로 신호를 보내 주세요!”', choices:[
+    { t:'🔦 랜턴으로 신호를 보낸다 (미니게임)', fn:() => { openSignalGame(ok => {
+        if (ok) { S.signalOk = true; S.stock.water += 4; S.stock.staple += 4; allEne(12); addLog('라디오로 들은 지시대로 랜턴을 깜빡여 구조 헬기에 신호를 보냈고, 구호물자를 받았습니다.'); finishEvt('🚁 신호가 전달됐어요! 구조대가 물자를 내려 줬어요. 💧 +4, 🥫 +4, 가족 에너지 +12'); }
+        else finishEvt('😢 신호가 제대로 전달되지 않았어요. 헬기가 지나가 버렸어요.');
+      }); return null; } },
+    { t:'🙈 위험할 것 같아 무시한다', fn:() => { allEne(-2); return '신호를 보내지 않았어요. 구조의 기회를 놓쳤을지도 몰라요. (가족 에너지 −2)'; } },
+  ] }) },
+  dj: { start:() => ({ emoji:'🎙️', text:'📻 채널을 돌리자 이상한 방송이 나와요. 쉰 목소리의 DJ가 큰소리로 떠들어요. “여러분~ 오늘 밤 모두 사라질 겁니다~ 끼히히!” …진짜 뉴스일까요, 장난일까요?', choices:[
+    { t:'📻 계속 들어 본다', fn:() => { if (Math.random() < 0.5) { allEne(-8); addLog('라디오에서 나온 무시무시한 괴담에 가족은 한참 동안 불안에 떨었습니다.'); return '😱 무서운 괴담이었어요. 가짜 뉴스에 가족이 겁먹었어요. (가족 에너지 −8)<br>💡 출처가 불분명한 방송은 공식 재난방송과 비교해 봐요.'; } allEne(12); addLog('우스꽝스러운 DJ의 농담 방송에 가족이 배를 잡고 웃었습니다.'); return '🤣 알고 보니 우스운 유머 방송이었어요! 온 가족이 깔깔 웃었어요. (가족 에너지 +12)'; } },
+    { t:'📡 공식 재난방송 채널로 돌린다', fn:() => { allEne(3); return '📡 공식 재난방송으로 돌리니 차분한 안내가 나와요. 출처가 확실한 방송을 믿어요! (가족 에너지 +3)'; } },
+  ] }) },
+};
+
+/* =====================================================================
+ *  미니게임 ① 갑상샘 약 — 게이지 타이밍
+ * ===================================================================== */
+function openPillGame(done) {
+  const hasRadio = !!S.has.radio;
+  const targets = S.fam.filter(m => !m.pill);
+  if (S.pillDoses <= 0 || targets.length === 0) {
+    openOverlay(`<div class="text-center text-5xl"><span class="siren">🚨</span></div>
+      <h3 class="text-2xl text-center mt-1" style="color:var(--alert)">긴급! 복용 지시 방송</h3>
+      <p class="mt-3 text-base leading-relaxed">${hasRadio ? '📻 “부산시 안내: 갑상샘 방호 약품을 복용하세요!”' : '📵 멀리서 가두방송이 희미하게 들린다…'}<br>
+      ${S.pillDoses <= 0 ? '😢 챙겨 온 💊 약이 없어요. 주민센터·학교 등 보관처에서 지시에 따라 받아야 해요.' : '이미 모두 약을 먹은 상태예요.'}</p>
+      <div class="text-center mt-4"><button class="btn px-6 py-2 text-lg text-white" style="background:var(--navy)" data-close>확인 ▶</button></div>`);
+    miniClick = e => { if (e.target.closest('[data-close]')) { closeOverlay(); S.instructionDone = true; done(); } };
+    return;
+  }
+  const DURS = [4800, 4300, 3900, 3500];
+  let idx = 0, t0 = 0, pressed = false, finished = false, g0 = 0, g1 = 0, g2 = 0, dur = 0, timeoutId = 0, rafId = 0;
+
+  openOverlay(`
+    <div class="text-center text-5xl"><span class="siren">🚨</span></div>
+    <h3 class="text-2xl text-center mt-1" style="color:var(--alert)">긴급! 갑상샘 방호 약품 타이밍</h3>
+    <p class="mt-2 text-base leading-relaxed">${hasRadio
+      ? '📻 방사성 구름이 다가오고 있어요! 곧 방송에서 <b>복용 지시</b>가 나와요. 마커가 <b style="color:#2e9b4a">초록 구간</b>에 들어올 때 💊 버튼을 눌러요!'
+      : '📵 전기가 끊겨 방송이 잘 안 들려요. 구간 색이 보이지 않지만, 멀리서 <b>가두방송</b>이 들릴 거예요. 그 소리가 날 때 💊 버튼을 눌러요!'}
+      <br><span class="text-sm text-slate-600">⚠️ 방송 전에 누르면 “너무 일찍”, 지나서 누르면 효과가 줄어요. (스페이스 키도 돼요)</span></p>
+    <div id="pg-who" class="mt-3 text-center text-xl"></div>
+    <div id="pg-gauge" class="relative mt-2" style="height:46px;border:3px solid var(--navy);border-radius:14px;overflow:hidden;background:#d9d9e6">
+      <div id="z0" class="absolute top-0 bottom-0"></div><div id="z1" class="absolute top-0 bottom-0"></div>
+      <div id="z2" class="absolute top-0 bottom-0"></div><div id="z3" class="absolute top-0 bottom-0"></div>
+      <div id="pg-mark" class="absolute top-0 bottom-0" style="width:6px;background:#1b1f6b;left:0"></div>
+    </div>
+    <div class="flex justify-between text-xs mt-1 text-slate-600"><span>⬅️ 아직 지시 전</span><span>🟢 지금! → 🟡 늦음 → 🔴 너무 늦음</span></div>
+    <div id="pg-sign" class="mt-2 text-center text-xl min-h-[1.8em]"></div>
+    <div class="text-center mt-2"><button id="pg-btn" class="bigbtn px-8 py-4 text-2xl" style="background:#ffe1de">💊 먹이기!</button></div>
+    <p id="pg-res" class="mt-3 text-center text-lg min-h-[1.6em]"></p>
+    <div id="pg-end" class="text-center mt-2"></div>`);
+
+  const setZone = (id, l, w, c) => { const el = $(id); el.style.left = (l * 100) + '%'; el.style.width = (w * 100) + '%'; el.style.background = c; };
+  function startRound() {
+    if (idx >= targets.length || S.pillDoses <= 0) return finish();
+    const m = targets[idx];
+    $('pg-who').innerHTML = `${m.emoji} <b>${m.name}</b> 차례 (${idx + 1}/${targets.length})`;
+    g0 = 0.28 + Math.random() * 0.2; g1 = g0 + 0.17; g2 = g1 + 0.18;
+    dur = DURS[Math.min(idx, DURS.length - 1)];
+    if (hasRadio) { setZone('z0', 0, g0, '#ffd0cc'); setZone('z1', g0, g1 - g0, '#8be08b'); setZone('z2', g1, g2 - g1, '#ffe38a'); setZone('z3', g2, 1 - g2, '#ffb3ad'); }
+    else { setZone('z0', 0, 1, '#d9d9e6'); setZone('z1', 0, 0, '#d9d9e6'); setZone('z2', 0, 0, '#d9d9e6'); setZone('z3', 0, 0, '#d9d9e6'); }
+    pressed = false; $('pg-res').textContent = ''; $('pg-sign').textContent = '…방송을 기다리는 중…';
+    $('pg-btn').disabled = false;
+    t0 = performance.now();
+    cancelAnimationFrame(rafId); rafId = requestAnimationFrame(tick);
+  }
+  function tick(now) {
+    if (finished || pressed) return;
+    const p = (now - t0) / dur;
+    $('pg-mark').style.left = (Math.min(1, p) * 100) + '%';
+    if (p >= g0 && p < g1) { $('pg-sign').innerHTML = `<span class="blink" style="color:var(--alert)">📢 ${hasRadio ? '“지금 즉시 복용하세요!”' : '(멀리서) “…복용…하세요…”'}</span>`; }
+    else if (p >= g1) $('pg-sign').textContent = '⏳ 시간이 지나고 있어요…';
+    if (p >= 1) { pressed = true; $('pg-btn').disabled = true; $('pg-res').innerHTML = '😢 놓쳤어요! 약을 먹이지 못했어요.'; timeoutId = setTimeout(() => { idx++; startRound(); }, 1300); return; }
+    rafId = requestAnimationFrame(tick);
+  }
+  function press() {
+    if (finished || pressed || !$('pg-btn') || $('pg-btn').disabled) return;
+    pressed = true; $('pg-btn').disabled = true;
+    const p = (performance.now() - t0) / dur, m = targets[idx];
+    const st = p < g0 ? 'early' : p < g1 ? 'full' : p < g2 ? 'half' : 'late';
+    m.pill = st; S.pillDoses--;
+    if (st === 'full') S.bestPill++;
+    $('pg-res').innerHTML = { early:'😱 방송이 나오기 전에 먹었어요! 효과가 없어요.', full:'🎉 완벽! 지시가 나온 바로 그때예요!', half:'⏰ 조금 늦었어요. 효과가 절반이에요.', late:'😢 너무 늦었어요. 효과가 거의 없어요.' }[st];
+    renderHead(); renderFam();
+    timeoutId = setTimeout(() => { idx++; startRound(); }, 1300);
+  }
+  function finish() {
+    finished = true; $('pg-btn').disabled = true; $('pg-sign').textContent = '';
+    $('pg-end').innerHTML = '<button class="btn px-6 py-2 text-lg text-white" style="background:var(--navy)" data-close>확인 ▶</button>';
+  }
+  miniDown = e => { if (e.target.closest('#pg-btn')) { e.preventDefault(); press(); } };
+  miniKey = () => press();
+  miniClick = e => { if (e.target.closest('[data-close]')) { closeOverlay(); S.instructionDone = true; done(); } };
+  miniCleanup.push(() => { finished = true; clearTimeout(timeoutId); cancelAnimationFrame(rafId); });
+  startRound();
+}
+
+/* ---------- ② 카드 짝 맞추기 ---------- */
+function openCardGame() {
+  const faces = shuffle(['🍎','🌙','⭐']);
+  const deck = shuffle(faces.concat(faces));
+  let up = [], done = new Set(), tries = 0, lock = false;
+  const draw = () => deck.map((f, i) => `<button class="mcard ${done.has(i) ? 'done' : up.includes(i) ? 'up' : ''}" data-c="${i}">${(done.has(i) || up.includes(i)) ? f : '❓'}</button>`).join('');
+  openOverlay(`<div class="text-center text-4xl">🃏</div>
+    <h3 class="text-2xl text-center" style="color:var(--navy)">카드 짝 맞추기</h3>
+    <p class="text-center text-base mt-1">같은 그림 3쌍을 찾아요! 적게 뒤집을수록 에너지가 많이 충전돼요.</p>
+    <p class="text-center mt-1">뒤집은 횟수 <b id="cg-t">0</b>번</p>
+    <div id="cg-grid" class="grid grid-cols-3 gap-2 mt-3">${draw()}</div>
+    <div id="cg-res" class="text-center mt-3"></div>`);
+  miniClick = e => {
+    const b = e.target.closest('[data-c]');
+    if (b && !lock) {
+      const i = +b.dataset.c; if (done.has(i) || up.includes(i)) return;
+      up.push(i); $('cg-grid').innerHTML = draw();
+      if (up.length === 2) {
+        tries++; $('cg-t').textContent = tries; lock = true;
+        const [a, c] = up;
+        if (deck[a] === deck[c]) { done.add(a); done.add(c); up = []; lock = false; $('cg-grid').innerHTML = draw(); checkEnd(); }
+        else { const id = setTimeout(() => { up = []; lock = false; $('cg-grid').innerHTML = draw(); }, 750); miniCleanup.push(() => clearTimeout(id)); }
+      }
+      return;
+    }
+    if (e.target.closest('[data-close]')) { closeOverlay(); renderAll(); }
+  };
+  function checkEnd() {
+    if (done.size < 6) return;
+    const gain = clamp(32 - (tries - 3) * 6, 12, 32);
+    allEne(gain); S.cardToday = true; S.plays++;
+    S.msg = `🃏 카드 짝 맞추기로 온 가족이 즐거웠어요! (가족 에너지 +${gain})`;
+    addLog('전기가 끊긴 대피소에서도 가족은 카드놀이를 하며 오랜만에 웃었습니다.');
+    renderHead(); renderFam();
+    $('cg-res').innerHTML = `<div class="rounded-xl p-3 pop" style="background:#e4f7e1">🎉 ${tries}번 만에 성공! 가족 에너지 <b>+${gain}</b></div>
+      <button class="btn mt-3 px-6 py-2 text-lg text-white" style="background:var(--navy)" data-close>닫기 ▶</button>`;
+  }
+}
+
+/* ---------- ③ 게임기 연타 ---------- */
+function openConsoleGame() {
+  if (S.uses.game <= 0) return;
+  S.uses.game--;
+  let taps = 0, left = 6.0, over = false;
+  openOverlay(`<div class="text-center text-4xl">🎮</div>
+    <h3 class="text-2xl text-center" style="color:var(--navy)">게임기 연타 챌린지</h3>
+    <p class="text-center text-base mt-1">6초 동안 버튼을 최대한 빨리 눌러요! 많이 누를수록 에너지가 충전돼요.</p>
+    <div class="text-center mt-2 text-3xl tabular-nums"><span id="cs-time">6.0</span>초 · <b id="cs-n">0</b>번</div>
+    <div class="text-center mt-3"><button id="cs-btn" class="bigbtn px-10 py-8 text-4xl" style="background:#dff0ff">🎮 TAP!</button></div>
+    <div id="cs-res" class="text-center mt-3"></div>`);
+  const iv = setInterval(() => {
+    left -= 0.1; if (left <= 0) { left = 0; end(); }
+    const el = $('cs-time'); if (el) el.textContent = left.toFixed(1);
+  }, 100);
+  miniCleanup.push(() => clearInterval(iv));
+  miniDown = e => { if (!over && e.target.closest('#cs-btn')) { taps++; $('cs-n').textContent = taps; } };
+  miniKey = () => { if (!over) { taps++; $('cs-n').textContent = taps; } };
+  miniClick = e => { if (e.target.closest('[data-close]')) { closeOverlay(); renderAll(); } };
+  function end() {
+    if (over) return; over = true; clearInterval(iv);
+    $('cs-btn').disabled = true;
+    const gain = Math.min(30, 8 + Math.floor(taps * 0.6));
+    allEne(gain); S.plays++;
+    S.msg = `🎮 게임기로 신나게 놀았어요! (가족 에너지 +${gain}, 게임기 남은 ${S.uses.game}회)`;
+    addLog('아껴 둔 배터리로 가족은 잠깐 게임을 했고, 대피소에 웃음소리가 퍼졌습니다.');
+    miniKey = null; renderHead(); renderFam();
+    $('cs-res').innerHTML = `<div class="rounded-xl p-3 pop" style="background:#e4f7e1">${taps}번 연타! 가족 에너지 <b>+${gain}</b></div>
+      <button class="btn mt-3 px-6 py-2 text-lg text-white" style="background:var(--navy)" data-close>닫기 ▶</button>`;
+  }
+}
+
+/* ---------- ④ 구호물자 받기 ---------- */
+function openCrateGame() {
+  const POOL = [{ e:'🥤', t:'water' }, { e:'🥫', t:'staple' }, { e:'🍜', t:'staple' }, { e:'🥤', t:'water' }, { e:'🍞', t:'bad' }];
+  const holes = Array(9).fill(null);
+  let left = 8.0, got = { water:0, staple:0 }, bad = 0, over = false;
+  openOverlay(`<div class="text-center text-4xl">📦</div>
+    <h3 class="text-2xl text-center" style="color:var(--navy)">구호물자 받기!</h3>
+    <p class="text-center text-base mt-1">튀어나오는 🥤🥫🍜를 눌러 받아요! 🍞 상하기 쉬운 빵은 받지 않아요.</p>
+    <div class="text-center mt-1 text-xl"><span id="cr-time">8.0</span>초 · 🥤 <b id="cr-w">0</b> · 🥫 <b id="cr-s">0</b> · 🍞 실수 <b id="cr-b">0</b></div>
+    <div id="cr-grid" class="grid grid-cols-3 gap-2 mt-3">${holes.map((_, i) => `<button class="hole" data-h="${i}"></button>`).join('')}</div>
+    <div id="cr-res" class="text-center mt-3"></div>`);
+  const cell = i => ovBox.querySelector(`[data-h="${i}"]`);
+  const spawn = setInterval(() => {
+    if (over) return;
+    const free = holes.map((h, i) => h ? -1 : i).filter(i => i >= 0); if (!free.length) return;
+    const i = free[rand(free.length)], it = POOL[rand(POOL.length)];
+    holes[i] = { ...it }; cell(i).textContent = it.e;
+    const tid = setTimeout(() => { if (holes[i]) { holes[i] = null; cell(i).textContent = ''; } }, 1000);
+    miniCleanup.push(() => clearTimeout(tid));
+  }, 560);
+  const iv = setInterval(() => {
+    left -= 0.1; if (left <= 0) { left = 0; end(); }
+    const el = $('cr-time'); if (el) el.textContent = left.toFixed(1);
+  }, 100);
+  miniCleanup.push(() => { clearInterval(spawn); clearInterval(iv); });
+  miniDown = e => {
+    const b = e.target.closest('[data-h]'); if (!b || over) return;
+    const i = +b.dataset.h, it = holes[i]; if (!it) return;
+    holes[i] = null; b.textContent = '✨';
+    if (it.t === 'bad') { bad++; $('cr-b').textContent = bad; }
+    else { got[it.t]++; $('cr-w').textContent = got.water; $('cr-s').textContent = got.staple; }
+  };
+  miniClick = e => { if (e.target.closest('[data-close]')) { closeOverlay(); renderAll(); } };
+  function end() {
+    if (over) return; over = true;
+    clearInterval(spawn); clearInterval(iv);
+    S.stock.water += got.water; S.stock.staple += got.staple;
+    S.crateDone = true; S.crates += got.water + got.staple;
+    if (got.water + got.staple) addLog('헬기에서 내려온 구호물자를 가족이 힘을 합쳐 받아 냈습니다.');
+    S.dropNote += `<br>🎯 미니게임 결과: 💧 +${got.water} · 🥫 +${got.staple} ${bad ? `(🍞 상하기 쉬운 빵은 ${bad}번 잘못 눌렀어요)` : ''}`;
+    renderHead();
+    $('cr-res').innerHTML = `<div class="rounded-xl p-3 pop" style="background:#e4f7e1">💧 물 +${got.water} · 🥫 식량 +${got.staple}${bad ? ` · 🍞 실수 ${bad}번` : ''}</div>
+      <button class="btn mt-3 px-6 py-2 text-lg text-white" style="background:var(--navy)" data-close>닫기 ▶</button>`;
+  }
+}
+
+/* ---------- ⑤ 상인과 카드 대결 ---------- */
+function openDuel(cb) {
+  const nums = shuffle([1,2,3,4,5,6,7,8,9]);
+  const mine = nums.slice(0, 3), his = nums[3];
+  let chosen = false;
+  const peek = S.has.cards ? 0 : -1;
+  openOverlay(`<div class="text-center text-4xl">🃏</div>
+    <h3 class="text-2xl text-center" style="color:var(--navy)">상인과 카드 대결!</h3>
+    <p class="text-center text-base mt-1">세 장 중 한 장을 골라요. 상인보다 <b>숫자가 크면 승리</b>!<br>${S.has.cards ? '🃏 카드를 챙겨 와서 첫 번째 카드를 미리 볼 수 있어요!' : ''}</p>
+    <div class="grid grid-cols-3 gap-2 mt-3">${mine.map((n, i) => `<button class="mcard ${i === peek ? 'up' : ''}" data-d="${i}">${i === peek ? n : '🂠'}</button>`).join('')}</div>
+    <div id="du-res" class="text-center mt-3 text-lg"></div>`);
+  miniClick = e => {
+    const b = e.target.closest('[data-d]');
+    if (b && !chosen) {
+      chosen = true;
+      const i = +b.dataset.d, my = mine[i], win = my > his;
+      b.textContent = my; b.classList.add('up');
+      $('du-res').innerHTML = `<div class="rounded-xl p-3 pop" style="background:${win ? '#e4f7e1' : '#ffe9e6'}">내 카드 <b>${my}</b> vs 상인 카드 <b>${his}</b> → ${win ? '🎉 승리!' : '😢 패배…'}</div>
+        <button class="btn mt-3 px-6 py-2 text-lg text-white" style="background:var(--navy)" data-fin>결과 확인 ▶</button>`;
+      miniClick = e2 => { if (e2.target.closest('[data-fin]')) { closeOverlay(); cb(win); } };
+    }
+  };
+}
+
+/* ---------- ⑥ 구조 신호 (순서 기억) ---------- */
+function openSignalGame(cb) {
+  const COL = [{ e:'🔴', c:'#ff9a9a' }, { e:'🟡', c:'#ffe27a' }, { e:'🔵', c:'#9ac8ff' }];
+  const seq = Array.from({ length:4 }, () => rand(3));
+  let inp = [], accept = false;
+  openOverlay(`<div class="text-center text-4xl">🔦</div>
+    <h3 class="text-2xl text-center" style="color:var(--navy)">구조 신호 보내기</h3>
+    <p id="sg-msg" class="text-center text-base mt-1">불빛이 켜지는 <b>순서</b>를 잘 보고 똑같이 눌러요!</p>
+    <div class="grid grid-cols-3 gap-3 mt-3">${COL.map((c, i) => `<button class="lamp" id="lamp${i}" data-l="${i}" style="background:${c.c}">${c.e}</button>`).join('')}</div>
+    <div id="sg-res" class="text-center mt-3"></div>`);
+  const flash = i => { const el = $('lamp' + i); if (!el) return; el.classList.add('on'); setTimeout(() => el && el.classList.remove('on'), 380); };
+  seq.forEach((n, k) => { const id = setTimeout(() => flash(n), 900 + k * 700); miniCleanup.push(() => clearTimeout(id)); });
+  const id2 = setTimeout(() => { accept = true; const m = $('sg-msg'); if (m) m.innerHTML = '👆 이제 똑같은 순서로 눌러요!'; }, 900 + seq.length * 700);
+  miniCleanup.push(() => clearTimeout(id2));
+  miniClick = e => {
+    const b = e.target.closest('[data-l]'); if (!b || !accept) return;
+    const i = +b.dataset.l; flash(i); inp.push(i);
+    if (inp[inp.length - 1] !== seq[inp.length - 1]) { accept = false; end(false); }
+    else if (inp.length === seq.length) { accept = false; end(true); }
+  };
+  function end(ok) {
+    $('sg-res').innerHTML = `<div class="rounded-xl p-3 pop" style="background:${ok ? '#e4f7e1' : '#ffe9e6'}">${ok ? '🎉 신호 전송 성공!' : '😢 순서가 틀렸어요… 신호 실패'}</div>
+      <button class="btn mt-3 px-6 py-2 text-lg text-white" style="background:var(--navy)" data-fin>확인 ▶</button>`;
+    miniClick = e => { if (e.target.closest('[data-fin]')) { closeOverlay(); cb(ok); } };
+  }
+}
+
+/* ---------- ⑦ 탐험 보내기 ---------- */
+function expBlock(m) {
+  if (hydState(m.hyd).k === 2) return '🥵 갈증이라 못 가요';
+  if (satState(m.sat).k === 2) return '😵 굶주려서 못 가요';
+  if (m.sick) return '🤒 병들어서 못 가요';
+  if (m.ene < 15) return '⚡ 에너지 부족';
+  return '';
+}
+function openExpedition() {
+  const cx = { m:null, gear:'none', warned:false };
+  const cancelBtn = '<div class="text-center mt-3"><button class="btn px-5 py-1 text-base bg-white" data-cancel>취소</button></div>';
+  function v1() {
+    const cands = S.fam.filter(m => m.ene >= 15);
+    openOverlay(`<div class="text-center text-4xl">🧭</div>
+      <h3 class="text-2xl text-center" style="color:var(--navy)">탐험 보내기</h3>
+      <p class="text-center text-base mt-1">누구를 밖으로 보낼까요? <span class="text-sm" style="color:var(--alert)">(갈증·굶주림·병든 가족, 에너지 15 미만인 가족은 못 가요)</span></p>
+      <div class="grid grid-cols-2 gap-2 mt-3">${S.fam.map(m => `<button class="btn py-3 text-lg bg-white" data-m="${m.id}" ${expBlock(m) ? 'disabled' : ''}>${m.emoji} ${m.name}<div class="text-xs">${expBlock(m) || '⚡ ' + m.ene}</div></button>`).join('')}</div>${cancelBtn}`);
+    miniClick = e => {
+      if (e.target.closest('[data-cancel]')) return closeOverlay();
+      const b = e.target.closest('[data-m]'); if (b && !b.disabled) { cx.m = member(b.dataset.m); v2(); }
+    };
+  }
+  function v2() {
+    openOverlay(`<div class="text-center text-4xl">${cx.m.emoji}</div>
+      <h3 class="text-2xl text-center" style="color:var(--navy)">${cx.m.name}의 장비 고르기</h3>
+      <p class="text-center text-base mt-1">밖은 방사성 물질이 있을 수 있어요. 무엇을 입고 나갈까요?</p>
+      <div class="space-y-2 mt-3">
+        <button class="choice w-full p-3 text-base" data-g="gas" ${S.has.gas ? '' : 'disabled'}>🥽 방독면 ${S.has.gas ? '— 오염으로부터 가장 안전해요' : '(없음)'}</button>
+        <button class="choice w-full p-3 text-base" data-g="mask" ${S.has.mask ? '' : 'disabled'}>😷 마스크·우의 ${S.has.mask ? '— 어느 정도 막아 주지만 완벽하지 않아요' : '(없음)'}</button>
+        <button class="choice w-full p-3 text-base" data-g="none">🙅 아무것도 쓰지 않는다 — 매우 위험해요!</button>
+      </div>${cancelBtn}`);
+    miniClick = e => {
+      if (e.target.closest('[data-cancel]')) return closeOverlay();
+      const b = e.target.closest('[data-g]'); if (b && !b.disabled) { cx.gear = b.dataset.g; v3(); }
+    };
+  }
+  function v3() {
+    const survivors = ['길을 잃은 한 아주머니', '다리를 다친 청년', '배낭을 멘 할아버지', '지친 학생'];
+    openOverlay(`<div class="text-center text-4xl">🧑‍🦯</div>
+      <h3 class="text-2xl text-center" style="color:var(--navy)">길 잃은 생존자를 만났어요!</h3>
+      <p class="text-base mt-2 leading-relaxed">${cx.m.emoji}${cx.m.name}은(는) 폐허가 된 거리에서 <b>${survivors[rand(4)]}</b>을(를) 만났어요. “살려 주세요… 저도 대피소를 찾고 있어요.”</p>
+      <div class="space-y-2 mt-3">
+        <button class="choice w-full p-3 text-base" data-s="trade" ${S.stock.water > 0 ? '' : 'disabled'}>🤝 물 1개를 주고 식량 3개를 받는다 ${S.stock.water > 0 ? '' : '(물 없음)'}</button>
+        <button class="choice w-full p-3 text-base" data-s="listen">👂 이야기를 듣고 위험한 지역 정보를 얻는다</button>
+        <button class="choice w-full p-3 text-base" data-s="skip">🚶 그냥 지나간다</button>
+      </div>`);
+    miniClick = e => {
+      const b = e.target.closest('[data-s]'); if (!b || b.disabled) return;
+      let note = '';
+      if (b.dataset.s === 'trade') { S.stock.water--; S.stock.staple += 3; note = '🤝 물 1개와 식량 3개를 바꿨어요. (💧 −1, 🥫 +3)'; }
+      else if (b.dataset.s === 'listen') { cx.warned = true; note = '👂 “저쪽 길은 방사능이 높아요, 돌아가요!” 위험한 지역을 알게 됐어요.'; }
+      else note = '🚶 그냥 지나갔어요.';
+      v4(note);
+    };
+  }
+  function v4(note1) {
+    let contam = false, zone = '';
+    if (cx.warned) zone = '👂 생존자가 알려준 안전한 길로 돌아가서 오염 지역을 피했어요!';
+    else if (cx.gear === 'gas') zone = '🥽 오염 지역을 지나갔지만 <b>방독면</b> 덕분에 안전했어요!';
+    else if (cx.gear === 'mask') { contam = Math.random() < 0.45; zone = contam ? '😷 오염 지역을 지나는 동안 마스크만으로는 부족했어요… 오염되고 말았어요!' : '😷 마스크·우의 덕분에 다행히 오염을 피했어요!'; }
+    else { contam = true; zone = '🙅 아무 보호 없이 오염 지역을 지나 <b>방사능에 오염</b>됐어요!'; }
+    const lw = rand(3) + (S.has.map ? 1 : 0), ls = 1 + rand(3) + (S.has.map ? 1 : 0);
+    S.stock.water += lw; S.stock.staple += ls;
+    cx.m.ene = clamp(cx.m.ene - 12, 0, 100); S.expeds++; S.expToday = true;
+    let back = '';
+    if (contam) {
+      cx.m.contam = true; S.expUnsafe = true;
+      if (cx.gear === 'none') { cx.m.sick = true; S.everSick = true; back = `<div class="rounded-xl p-3 mt-2" style="background:#ffe9e6">🤒 ${cx.m.emoji}${cx.m.name}은(는) <b>아파서 방사능병에 걸린 채</b> 돌아왔어요. (🧼 비누로 씻기고, 🩹 구급상자로 치료해요)</div>`; }
+      else back = `<div class="rounded-xl p-3 mt-2" style="background:#ffe9e6">☢️ ${cx.m.emoji}${cx.m.name}의 몸에 오염물이 묻은 채 돌아왔어요. 🧼 비누·샴푸로 씻겨요!</div>`;
+      addLog(`${cx.m.name}이(가) 탐험에서 오염된 채 돌아와 가족이 걱정했습니다.`);
+    } else {
+      S.expSafeCount++;
+      addLog(`${cx.m.name}이(가) 탐험에서 물자를 구해 무사히 돌아왔습니다.`);
+    }
+    S.msg = `🧭 ${cx.m.emoji}${cx.m.name}의 탐험 결과: 💧 +${lw} · 🥫 +${ls}${contam ? ' (오염 상태로 귀환)' : ''}`;
+    openOverlay(`<div class="text-center text-4xl">🏁</div>
+      <h3 class="text-2xl text-center" style="color:var(--navy)">탐험 결과</h3>
+      <div class="space-y-2 mt-3 text-base">
+        <div class="rounded-xl p-3" style="background:#f3f6ff">${note1}</div>
+        <div class="rounded-xl p-3" style="background:#f3f6ff">${zone}</div>
+        <div class="rounded-xl p-3" style="background:#e4f7e1">🎒 가져온 물자: 💧 +${lw} · 🥫 +${ls} ${S.has.map ? '<span class="text-sm">(🗺️ 지도 덕분에 더 찾았어요!)</span>' : ''}</div>
+        ${back}
+        <div class="rounded-xl p-3" style="background:#fff8e0">💡 야외에서 돌아오면 <b>옷을 벗고 비누·샴푸로 샤워</b>해요. 야외는 안전이 확인될 때까지 삼가는 게 가장 좋아요.</div>
+      </div>
+      <div class="text-center mt-3"><button class="btn px-6 py-2 text-lg text-white" style="background:var(--navy)" data-fin>닫기 ▶</button></div>`);
+    miniClick = e => { if (e.target.closest('[data-fin]')) { closeOverlay(); renderAll(); } };
+  }
+  v1();
+}
+
+/* =====================================================================
+ *  하루 마치기 / 밤 처리
+ * ===================================================================== */
+function endDay() {
+  if (S.day === 2 && !S.instructionDone) { openPillGame(() => { resolvePlume(); finishNight(); }); return; }
+  finishNight();
+}
+
+function resolvePlume() {
+  const lines = ['🌫️ <b>밤사이 방사성 구름이 지나갔어요…</b>'];
+  const cnt = { full:0, thy:0 };
+  S.fam.forEach(m => {
+    const p = m.pill === 'full' ? 1 : m.pill === 'half' ? 0.5 : 0;
+    if (m.pill === 'full') cnt.full++;
+    const sc = p + (S.sealed ? 0.25 : 0) + ((S.has.mask || S.has.gas) ? 0.25 : 0);
+    if (sc >= 0.75) lines.push(`${m.emoji} ${m.name}: 방사성 요오드로부터 안전했어요! ${p === 1 ? '(약을 제때 먹었어요)' : '(창문 차단·마스크가 도와줬어요)'}`);
+    else { m.thy = true; cnt.thy++; lines.push(`${m.emoji} ${m.name}: 갑상샘 피폭이 우려돼요. ${m.pill === 'early' ? '(약을 너무 일찍 먹어서 효과가 없었어요)' : m.pill ? '(약을 너무 늦게 먹었어요)' : '(약을 먹지 못했어요)'}`); }
+  });
+  if (cnt.thy === 0) addLog('그날 밤 방사성 구름이 지나갔지만, 방송 지시에 맞춰 제때 약을 먹인 덕분에 가족은 모두 무사했습니다.');
+  else if (cnt.full > 0) addLog('방송 지시가 나오자 당신은 서둘러 약을 먹였지만, 모두를 지키기엔 타이밍이 아쉬웠습니다. 일부 가족은 검진이 필요한 상태가 되었습니다.');
+  else addLog('방사성 구름이 지나간 밤, 가족은 약의 도움을 제대로 받지 못했습니다. 아이들의 손을 꼭 잡고 밤을 버텼습니다.');
+  S.nightLines = lines;
+}
+
+function finishNight() {
+  const lines = S.nightLines.slice(); S.nightLines = [];
+  let thirst = 0, starve = 0, down = false;
+  S.fam.forEach(m => {
+    m.hyd = clamp(m.hyd - 22, 0, 100); m.sat = clamp(m.sat - 20, 0, 100);
+    let de = -4;
+    const hs = hydState(m.hyd).k, ss = satState(m.sat).k;
+    if (hs === 1) de -= 2; if (hs === 2) { de -= 8; thirst++; }
+    if (ss === 1) de -= 2; if (ss === 2) { de -= 6; starve++; }
+    if (m.contam) {
+      de -= 4; m.contamDays++;
+      if (m.contamDays >= 3) {
+        m.contam = false; m.contamDays = 0; m.sick = true; S.everSick = true;
+        lines.push(`🤒 ${m.emoji}${m.name}이(가) 오염 상태로 오래 지내서 <b>병들고 말았어요!</b> 🩹 구급상자로 치료할 수 있어요.`);
+        addLog(`${m.name}은(는) 오염된 채로 사흘을 보내다 끝내 병이 나고 말았습니다.`);
+      } else lines.push(`⚠️ ${m.emoji}${m.name}이(가) ${m.contamDays}일째 오염 상태예요! 빨리 🧼 씻기지 않으면 병들어요.`);
+    } else m.contamDays = 0;
+    if (m.sick) de -= 6;
+    if (m.thy) de -= 3;
+    if (m.hurt) { de -= 4; m.hurtDays++; if (m.hurtDays >= 3) { m.hurt = false; m.hurtDays = 0; lines.push(`🤕 ${m.emoji}${m.name}의 상처가 푹 쉬어서 저절로 나았어요.`); } }
+    if (S.has.radio) de += 3;
+    m.ene = clamp(m.ene + de, 0, 100);
+    if (m.ene <= 25) down = true;
+  });
+  const thirsty = S.fam.filter(m => hydState(m.hyd).k >= 1).length, hungry = S.fam.filter(m => satState(m.sat).k >= 1).length;
+  if (thirst) { lines.push(`🥵 ${thirst}명이 <b>갈증</b>에 시달려요! 물을 먼저 줘요. (쓰러지진 않지만 에너지가 크게 떨어져요)`); addLog('물이 바닥나 가족은 갈증을 꾹 참아야 했습니다.'); }
+  else if (thirsty) lines.push(`😮‍💨 ${thirsty}명이 목말라해요. 물을 챙겨 줘요.`);
+  if (starve) { lines.push(`😵 ${starve}명이 <b>굶주림</b>으로 힘이 없어요! 식량을 먼저 줘요.`); addLog('식량이 모자라 가족은 배고픔 속에서 서로를 다독였습니다.'); }
+  else if (hungry) lines.push(`😕 ${hungry}명이 배고파해요. 식량을 챙겨 줘요.`);
+  if (down) lines.push('😴 에너지가 많이 떨어진 가족이 있어요. 🃏 카드나 ♟️ 체스, 🎮 게임, 🗣️ 끝말잇기로 충전해요!');
+  if (!thirsty && !hungry && !down) lines.push('😊 가족이 무사히 하루를 보냈어요.');
+  if (S.fam.some(m => m.contam)) lines.push('☢️ 아직 오염 상태인 가족이 있어요. 🧼 비누·샴푸로 씻을 수 있어요.');
+  if (S.fam.some(m => m.sick)) lines.push('🤒 병든 가족이 있어요. 🩹 구급상자로 치료해요. (못 하면 구조 뒤 곧바로 병원으로 가요)');
+  S.nightLines = lines;
+  S.stage = 'night';
+  renderAll();
+}
+
+/* =====================================================================
+ *  엔딩
+ * ===================================================================== */
+function computeScore() {
+  const has = k => S.dep.includes(k);
+  const misc = ['extinguisher','insect','guide','map','toolbox','firstaid'].filter(has).length;
+  const prep = (has('radio') ? 3 : 0) + (has('pill') ? 3 : 0) + (has('mask') ? 2 : 0) + (has('gasmask') ? 2 : 0) + (has('soap') ? 2 : 0)
+             + Math.min(3, Math.floor(S.initWater / 3)) + Math.min(3, Math.floor(S.initStaple / 4)) + Math.min(2, misc);
+  const quiz = S.quizTotal ? Math.round(30 * S.quizCorrect / S.quizTotal) : 0;
+  const healthy = S.fam.filter(m => !m.contam && !m.thy && !m.hurt && !m.sick).length;
+  const sickCount = S.fam.filter(m => m.sick).length;
+  const health = Math.max(0, Math.round(30 * healthy / 4) - 4 * sickCount);
+  const pt = S.fam.reduce((a, m) => a + (m.pill === 'full' ? 1 : m.pill === 'half' ? 0.5 : 0), 0) / 4;
+  const pill = Math.round(10 * pt);
+  const life = Math.round(S.fam.reduce((a, m) => a + (m.hyd + m.sat + m.ene) / 3, 0) / 4 / 10);
+  const total = prep + quiz + health + pill + life;
+  const grade = total >= 90 ? 'S' : total >= 75 ? 'A' : total >= 55 ? 'B' : 'C';
+  return { prep, quiz, health, pill, life, total, grade, healthy, sickCount };
+}
+
+function computeBadges() {
+  const fullCnt = S.fam.filter(m => m.pill === 'full').length;
+  const hasFresh = S.dep.some(k => ITEMS[k].kind === 'fresh');
+  const staples = S.dep.filter(k => ITEMS[k].kind === 'staple').length;
+  return [
+    { e:'📻', n:'방송 지킴이',       d:'라디오를 대피소에 챙겼어요',                  ok:S.dep.includes('radio') },
+    { e:'🏃', n:'부지런한 일꾼',     d:'대피소를 4번 이상 왕복했어요',                 ok:S.trips >= 4 },
+    { e:'🥫', n:'오래가는 음식 박사', d:'상하기 쉬운 음식 없이 오래가는 음식 4개 이상', ok:!hasFresh && staples >= 4 },
+    { e:'🎯', n:'골든타임 명중',     d:'약을 제때 먹인 가족이 있어요',                 ok:fullCnt >= 1 },
+    { e:'💊', n:'완벽한 복용',       d:'온 가족에게 제때 약을 먹였어요',               ok:fullCnt === 4 },
+    { e:'🧠', n:'퀴즈 척척박사',     d:'방재 퀴즈를 모두 맞혔어요',                    ok:S.quizTotal > 0 && S.quizCorrect === S.quizTotal },
+    { e:'⚡', n:'번개 두뇌',         d:'번개 정답 ⭐을 5개 이상 모았어요',              ok:S.stars >= 5 },
+    { e:'🧼', n:'깨끗한 가족',       d:'오염된 가족이 한 명도 없어요',                  ok:S.fam.every(m => !m.contam && !m.sick) },
+    { e:'🎲', n:'놀이의 달인',       d:'놀이로 에너지를 5번 이상 충전했어요',           ok:S.plays >= 5 },
+    { e:'📦', n:'구호물자 캐처',     d:'구호물자를 8개 이상 받았어요',                  ok:S.crates >= 8 },
+    { e:'💖', n:'가족 사랑',         d:'모든 가족의 에너지가 50 이상이에요',            ok:S.fam.every(m => m.ene >= 50) },
+    { e:'🕵️', n:'똑똑한 문지기',     d:'강도·사기꾼에게 당하지 않고 손님을 맞았어요',   ok:S.doors >= 3 && !S.robbed && !S.scammed },
+    { e:'🪳', n:'벌레 퇴치왕',       d:'대피소의 벌레를 해결했어요',                    ok:S.bugSolved },
+    { e:'🚁', n:'신호 명사수',       d:'구조 신호를 성공적으로 보냈어요',               ok:S.signalOk },
+    { e:'🧭', n:'안전한 탐험가',     d:'탐험을 다녀오고 한 번도 오염되지 않았어요',     ok:S.expeds >= 1 && !S.expUnsafe },
+  ];
+}
+
+function buildStory(sc) {
+  const d = new Date();
+  const date = `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+  const cnt = {}; S.dep.forEach(k => cnt[k] = (cnt[k] || 0) + 1);
+  const names = Object.keys(cnt).map(k => `${ITEMS[k].emoji} ${ITEMS[k].name}${cnt[k] > 1 ? ' ×' + cnt[k] : ''}`);
+  let h = `<p>${date}, 고리 원자력발전소의 비상 사이렌이 울렸습니다. 당신은 두 손이 모자라도록 집과 지하 대피소를 ${S.trips}번 오가며 짐을 날랐습니다. ${names.length ? `대피소에 쌓인 물품은 이랬습니다 — ${names.join(', ')}.` : '대피소는 텅 비어 있었습니다.'}</p>`;
+  for (let day = 1; day <= S.N; day++) {
+    const ls = S.log.filter(l => l.d === day).map(l => l.t);
+    if (ls.length) h += `<p class="mt-2"><b>${day}일차.</b> ${ls.join(' ')}</p>`;
+  }
+  const allOk = sc.healthy === 4;
+  const sickNames = S.fam.filter(m => m.sick).map(m => m.emoji + m.name).join(', ');
+  h += `<p class="mt-2">그렇게 길고 긴 2주가 지나고 ${S.N}일째 되던 날, 지자체의 소개 안내에 따라 ${S.fam.map(m => m.emoji).join('')} 네 식구는 서로의 손을 꼭 잡고 버스에 올랐습니다. `
+    + (sickNames ? `하지만 ${sickNames}은(는) 오염된 채 오래 지낸 탓에 몸이 많이 안 좋았습니다. 구조대에 구조되자마자 <b>곧바로 병원으로 이송</b>되었고, 가족은 걱정 어린 마음으로 그 뒤를 따랐습니다. 다음에는 더 일찍 씻고 치료할 수 있기를 바라면서요.` : allOk ? '모두 건강한 모습으로, 그리고 한층 단단해진 마음으로요.' : '몇몇은 검진이 필요했지만, 구호소의 의료지원에서 차근차근 확인받을 수 있었습니다. 다음에는 더 잘 준비할 수 있을 거예요.')
+    + '</p>';
+  return h;
+}
+
+function buildFeedback() {
+  const f = [];
+  const adv = {
+    radio:'다음번에는 <b>단전에 대비해 라디오·건전지·랜턴</b>을 꼭 챙겨 보세요! 재난방송을 못 들으면 지시를 놓칠 수 있어요.',
+    pill:'<b>갑상샘 방호 약품</b>을 챙기면 방사성 요오드 피폭에 대비할 수 있어요. (단, 방송 지시가 있을 때만 먹어요!)',
+    soap:'<b>비누·샴푸</b>는 몸에 묻은 방사성 물질을 씻어 내는 데 꼭 필요해요.',
+  };
+  Object.keys(adv).forEach(k => { if (!S.dep.includes(k)) f.push(adv[k]); });
+  if (!S.dep.includes('mask') && !S.dep.includes('gasmask')) f.push('<b>마스크·우의나 방독면</b>은 외부 오염물을 마시거나 몸에 묻는 것을 줄여 줘요. 탐험이나 방사성 구름이 지나갈 때 꼭 필요해요.');
+  if (S.initWater < 9) f.push('🥤 <b>생수</b>를 더 많이 날랐다면 대피 생활이 훨씬 편했을 거예요. 큰 생수통(3칸)은 한 번에 많이 나를 수 있어요!');
+  if (S.initStaple < 12) f.push('🥫 <b>통조림·라면·즉석밥</b>처럼 오래가는 음식을 더 챙겨 보세요. 통조림 박스·쌀 포대(2칸)는 효율이 좋아요.');
+  if (S.dep.some(k => ITEMS[k].kind === 'fresh')) f.push('🍞 생크림빵·케이크·우유처럼 <b>쉽게 상하는 음식</b>보다는 통조림이나 라면이 좋아요. 냉장고가 꺼지면 금방 상해요!');
+  if (S.dep.some(k => ITEMS[k].kind === 'snack')) f.push('🍪 과자·초콜릿은 간식일 뿐이에요. 배가 금방 고파지니 든든한 식량을 먼저 챙겨요.');
+  if (S.dep.some(k => ITEMS[k].kind === 'trap')) f.push('💎📺🎹 귀금속·TV·피아노처럼 무겁고 생존에 도움이 안 되는 물건은 손 칸만 차지해요. 가볍고 꼭 필요한 물건이 먼저예요.');
+  if (S.lost.length) f.push('⏰ 시간이 끝날 때 손에 든 물건은 가져오지 못해요. 남은 시간을 보면서 대피소에 넣는 타이밍을 계산해요.');
+  const pills = S.fam.map(m => m.pill);
+  if (pills.includes('early')) f.push('💊 약을 <b>지시가 나오기 전에</b> 먹이면 정작 필요한 순간에 효과가 없어요. 방송 지시를 기다려요!');
+  if (pills.includes('half') || pills.includes('late')) f.push('⏰ 약은 <b>지시가 나온 바로 그때</b> 먹어야 해요. 시간이 지나면 효과가 줄고, 너무 늦으면 거의 없어요. (교재: 6시간 후엔 50%)');
+  if (S.dep.includes('pill') && pills.every(p => !p)) f.push('💊 약을 챙겼지만 지시 때 먹이지 못했어요. 지시 방송이 나오면 바로 먹일 수 있게 준비해요.');
+  if (!S.has.radio) f.push('📻 라디오가 없으면 지시 방송을 제때 알아채기 어렵고 바깥 소식도 몰라요.');
+  if (S.robbed) f.push('🚪 정체를 모르는 사람, 특히 위협적인 목소리에는 문을 열지 않아요!');
+  if (S.scammed) f.push('🕵️ 구조대라고 해도 <b>신원과 공식 안내</b>를 먼저 확인해요. 확인용이라며 물건을 요구하면 의심해요.');
+  if (S.bugIgnored) f.push('🪳 벌레를 방치하면 건강에 안 좋아요. 🧴 살충제·🧯 소화기·📘 안내서를 챙겨 두면 해결할 수 있어요.');
+  if (S.pipeFail) f.push('🔧 누수는 🧰 공구함이나 🗺️ 지도 등으로 빨리 해결해야 물자를 지킬 수 있어요.');
+  if (S.expUnsafe) f.push('🧭 야외는 위험해요! 꼭 나가야 한다면 <b>방독면이나 마스크·우의</b>를 쓰고, 돌아오면 <b>옷을 벗고 비누·샴푸로 샤워</b>해요.');
+  if (S.everSick) f.push('🤒 오염 상태를 오래 두면 <b>병들어요</b>! 오염되면 바로 🧼 비누·샴푸로 씻고, 병들면 🩹 구급상자로 치료해요. 치료하지 못하면 구조된 뒤 곧바로 병원에 가야 해요.');
+  S.wrongs.forEach(w => f.push(`📝 <b>${w.title}</b> — ${w.right} <span class="text-xs text-slate-500">(${w.ref})</span>`));
+  if (!f.length) f.push('🎉 정말 완벽해요! 올바른 방재 요령을 모두 지켰어요.');
+  return f;
+}
+
+function endGame() {
+  const sc = computeScore();
+  const badges = computeBadges();
+  const gradeColor = { S:'#e5a800', A:'#2e9b4a', B:'#2f9be0', C:'#8a8aa0' }[sc.grade];
+  $('end-box').innerHTML = `
+    <div class="text-center">
+      <div class="text-6xl">📖</div>
+      <h2 class="text-2xl sm:text-4xl mt-2 leading-snug" style="color:var(--navy)">우리 가족의 ${S.N}일</h2>
+      <p class="text-base text-slate-600">— 방사능 방재 생존 이야기 —</p>
+    </div>
+    <div class="mt-4 rounded-2xl p-4 text-lg leading-loose" style="background:#fffaf0;border:3px solid var(--amber)">${buildStory(sc)}</div>
+
+    <div class="mt-5 text-center">
+      <div class="text-sm text-slate-600">최종 등급</div>
+      <div class="text-8xl" style="color:${gradeColor};text-shadow:3px 3px 0 var(--navy)">${sc.grade}</div>
+      <div class="text-2xl">${sc.total}<span class="text-base"> / 100점</span></div>
+    </div>
+    <div class="mt-3 grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+      <div class="rounded-xl p-2" style="background:#fff3bf"><div class="text-xs">🎒 준비물</div><b>${sc.prep}</b>/20</div>
+      <div class="rounded-xl p-2" style="background:#dff0ff"><div class="text-xs">📝 방재 퀴즈 (${S.quizCorrect}/${S.quizTotal})</div><b>${sc.quiz}</b>/30</div>
+      <div class="rounded-xl p-2" style="background:#e4f7e1"><div class="text-xs">❤️ 가족 건강${sc.sickCount ? ' (병듦 ' + sc.sickCount + '명)' : ''}</div><b>${sc.health}</b>/30</div>
+      <div class="rounded-xl p-2" style="background:#ffe1de"><div class="text-xs">💊 약 복용 타이밍</div><b>${sc.pill}</b>/10</div>
+      <div class="rounded-xl p-2" style="background:#eee3ff"><div class="text-xs">⚡ 생활·에너지</div><b>${sc.life}</b>/10</div>
+    </div>
+
+    <div class="mt-3 rounded-xl p-3" style="background:#fff;border:3px solid var(--navy)">
+      <div class="flex justify-between text-base"><b>❤️ 가족 건강 게이지</b>${sc.sickCount ? '<b style="color:#e5322d">😷 안 좋음</b>' : sc.healthy < 4 ? '<b style="color:#f59e0b">😐 보통</b>' : '<b style="color:#2e9b4a">😊 좋음</b>'}</div>
+      ${bar(Math.round(sc.health / 30 * 100), sc.sickCount ? '#e5322d' : sc.healthy < 4 ? '#f59e0b' : '#2e9b4a')}
+      ${sc.sickCount ? '<p class="text-sm mt-1" style="color:#e5322d">병든 가족이 치료받지 못해 건강 점수가 크게 깎였어요.</p>' : ''}
+    </div>
+
+    <div class="mt-5">
+      <b>🏅 업적 배지 (${badges.filter(b => b.ok).length}/${badges.length})</b>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">${badges.map(b => `
+        <div class="badge ${b.ok ? '' : 'locked'}"><div class="text-2xl">${b.e} <b class="text-base">${b.n}</b></div><div class="text-xs text-slate-700">${b.d}</div></div>`).join('')}</div>
+    </div>
+
+    <div class="mt-5 rounded-2xl p-4" style="background:#e9f7ff;border:3px dashed var(--sky)">
+      <b>🧑‍🏫 방재 가이드 & 피드백</b>
+      <ul class="mt-2 space-y-2 list-disc pl-5 text-base">${buildFeedback().map(x => `<li>${x}</li>`).join('')}</ul>
+    </div>
+    <div class="mt-4 rounded-2xl p-4" style="background:#fff8e0">
+      <b>📌 오늘의 핵심 정리</b>
+      <ul class="mt-1 space-y-1 text-base">
+        <li>⏱️ <b>시간</b> 방사선에 노출되는 시간을 줄여요. &nbsp; ↔️ <b>거리</b> 멀리 떨어져요. &nbsp; 🏠 <b>차폐</b> 건물 안에서 피해요.</li>
+        <li>💊 갑상샘 방호 약품은 <b>지시가 있을 때, 제때</b> 먹어요.</li>
+        <li>🥫 비상식량은 쉽게 상하는 음식보다 <b>통조림·라면처럼 오래가는 음식</b>으로 준비해요.</li>
+        <li>🚪 모르는 사람이 문을 두드려도 <b>신원과 공식 안내를 먼저 확인</b>해요.</li>
+      </ul>
+    </div>
+    <div class="text-center mt-6"><button id="btn-retry" class="btn px-8 py-3 text-xl text-white" style="background:var(--alert)">🔄 다시 도전하기</button></div>`;
+  $('btn-retry').addEventListener('click', () => showScreen('screen-intro'));
+  showScreen('screen-end');
+}
+
+})();
+</script>
+</body>
+</html>
